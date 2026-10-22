@@ -26,6 +26,17 @@ from .views import (
     DailyOfferListAPIView,
     CartDetailAPIView,
     CartItemAddAPIView,
+    CartItemDetailAPIView,
+    CheckoutAPIView,
+    CustomerOrderListAPIView,
+    CustomerOrderDetailAPIView,
+    ReviewListAPIView,
+    AdminOrderListAPIView,
+    AdminOrderDetailAPIView,
+    AdminOrderStatusAPIView,
+    AdminOrderCancelAPIView,
+
+    
 )
 
 
@@ -43,6 +54,11 @@ urlpatterns = [
     path("offers/",DailyOfferListAPIView.as_view(),name="daily-offer-list",),
     path("cart/",CartDetailAPIView.as_view(),name="cart-detail",),
     path("cart/items/",CartItemAddAPIView.as_view(),name="cart-item-add",),
+    path("cart/items/<str:item_key>/",CartItemDetailAPIView.as_view(),name="cart-item-detail",),
+    path("checkout/",CheckoutAPIView.as_view(),name="checkout",),
+    path("orders/",CustomerOrderListAPIView.as_view(),name="customer-order-list",),
+    path("orders/<int:order_id>/",CustomerOrderDetailAPIView.as_view(),name="customer-order-detail",),
+    path("products/<int:product_id>/reviews/",ReviewListAPIView.as_view(),name="product-reviews",),
 
     path("admin/products/",AdminProductCreateAPIView.as_view(),name="admin-product-create",),
     path("admin/products/<int:product_id>/variants/",AdminProductVariantCreateAPIView.as_view(),name="admin-product-variant-create",),
@@ -57,5 +73,11 @@ urlpatterns = [
 
     path("admin/brands/",AdminBrandListCreateAPIView.as_view(),name="admin-brand-list",),
     path("admin/brands/<int:brand_id>/",AdminBrandDetailAPIView.as_view(),name="admin-brand-detail",),
+
+
+    path("admin/orders/",AdminOrderListAPIView.as_view(),name="admin-order-list",),
+    path("admin/orders/<int:order_id>/",AdminOrderDetailAPIView.as_view(),name="admin-order-detail",),
+    path("admin/orders/<int:order_id>/status/",AdminOrderStatusAPIView.as_view(),name="admin-order-status",),
+    path("admin/orders/<int:order_id>/cancel/",AdminOrderCancelAPIView.as_view(),name="admin-order-cancel",),
 
 ]

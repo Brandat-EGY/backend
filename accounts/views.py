@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 
 
 from rest_framework.views import APIView
+from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -12,9 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
 from brandat_egy.favorites import Favorites
-from .serializers import RegisterSerializer ,LoginSerializer
-
-
+from .serializers import RegisterSerializer ,LoginSerializer, CustomerProfileSerializer
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CSRFTokenAPIView(APIView):
@@ -101,15 +100,17 @@ class LoginAPIView(APIView):
     
 
 
-class MeAPIView(APIView):
+
+class MeAPIView(RetrieveUpdateAPIView):
+    serializer_class = CustomerProfileSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        user = request.user
+    http_method_names = [
+        "get",
+        "patch",
+        "head",
+        "options",
+    ]
 
-        return Response({
-            "id": user.pk,
-            "customer_name": user.customer_name,
-            "phone": user.phone,
-            "email": user.email,
-        })
+    def get_object(self):
+        return self.request.user

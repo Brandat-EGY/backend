@@ -89,3 +89,41 @@ class LoginSerializer(serializers.Serializer):
         trim_whitespace=False,
         style={"input_type": "password"},
     )
+
+
+
+class CustomerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+
+        fields = (
+            "id",
+            "customer_name",
+            "phone",
+            "email",
+            "address",
+        )
+
+        read_only_fields = (
+            "id",
+            "phone",
+        )
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "customer_name",
+            "email",
+            "address",
+        }
+
+        unexpected = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field cannot be updated."
+                for field in sorted(unexpected)
+            })
+
+        return attrs

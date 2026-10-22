@@ -22,7 +22,11 @@ from .models import (
     BoxImage,
     BoxItem,
     Collection,
-    DailyOffer
+    DailyOffer,
+    Order,
+    OrderItem,
+    OrderBox,
+    OrderBoxItem,
 )
 
 class FavoriteProductSerializer(serializers.ModelSerializer):
@@ -855,6 +859,271 @@ class CartAddItemSerializer(serializers.Serializer):
             })
 
         return attrs
+    
+
+class CartUpdateQuantitySerializer(serializers.Serializer):
+    quantity = serializers.IntegerField(
+        min_value=1,
+    )
+
+    def validate(self, attrs):
+        allowed_fields = {"quantity"}
+
+        unexpected_fields = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected_fields:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(unexpected_fields)
+            })
+
+        return attrs
+    
+
+class CheckoutSerializer(serializers.Serializer):
+    customer_name = serializers.CharField(
+        max_length=150,
+    )
+
+    phone = serializers.CharField(
+        max_length=20,
+    )
+
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+    address = serializers.CharField(
+        max_length=1000,
+    )
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "customer_name",
+            "phone",
+            "email",
+            "address",
+        }
+
+        unexpected = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(unexpected)
+            })
+
+        return attrs
+    
+
+class CustomerOrderItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(
+        source="variant.product_id",
+        read_only=True,
+    )
+
+    product_name_ar = serializers.CharField(
+        source="variant.product.name_ar",
+        read_only=True,
+    )
+
+    product_name_en = serializers.CharField(
+        source="variant.product.name_en",
+        read_only=True,
+    )
+
+    sku = serializers.CharField(
+        source="variant.sku",
+        read_only=True,
+    )
+
+    size = serializers.CharField(
+        source="variant.size",
+        read_only=True,
+    )
+
+    unit_price = serializers.DecimalField(
+        source="price",
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    total_price = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    class Meta:
+        model = OrderItem
+        fields = (
+            "id",
+            "product_id",
+            "product_name_ar",
+            "product_name_en",
+            "variant",
+            "sku",
+            "size",
+            "quantity",
+            "unit_price",
+            "total_price",
+        )
+        read_only_fields = fields
+
+
+class CustomerOrderBoxItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderBoxItem
+        fields = (
+            "id",
+            "variant",
+            "sku",
+            "product_name_ar",
+            "product_name_en",
+            "quantity",
+        )
+        read_only_fields = fields
+
+
+class CustomerOrderBoxSerializer(serializers.ModelSerializer):
+    items = CustomerOrderBoxItemSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    total_price = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    class Meta:
+        model = OrderBox
+        fields = (
+            "id",
+            "box",
+            "name_ar",
+            "name_en",
+            "sku",
+            "quantity",
+            "price",
+            "total_price",
+            "items",
+        )
+        read_only_fields = fields
+
+
+class CustomerOrderListSerializer(serializers.ModelSerializer):
+    total_price = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    payment_method = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = (
+            "id",
+            "status",
+            "payment_method",
+            "total_price",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    def get_payment_method(self, obj):
+        return "cash_on_delivery"
+
+
+class CustomerOrderDetailSerializer(CustomerOrderListSerializer):
+    items = CustomerOrderItemSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    boxes = CustomerOrderBoxSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta(CustomerOrderListSerializer.Meta):
+        fields = CustomerOrderListSerializer.Meta.fields + (
+            "customer_name",
+            "phone",
+            "email",
+            "address",
+            "updated_at",
+            "items",
+            "boxes",
+        )
+        read_only_fields = fields
+
+class ReviewListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+
+        fields = (
+            "id",
+            "name",
+            "rating",
+            "comment",
+            "created_at",
+        )
+
+        read_only_fields = fields
+
+
+class ReviewCreateSerializer(serializers.Serializer):
+    order_item_id = serializers.IntegerField(
+        min_value=1,
+    )
+
+    name = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+    rating = serializers.IntegerField(
+        min_value=1,
+        max_value=5,
+    )
+
+    comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "order_item_id",
+            "name",
+            "rating",
+            "comment",
+        }
+
+        unexpected = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(unexpected)
+            })
+
+        return attrs
 
 class AdminProductCreateSerializer(serializers.ModelSerializer):
     brand = serializers.PrimaryKeyRelatedField(
@@ -1355,3 +1624,81 @@ class AdminBrandQuerySerializer(serializers.Serializer):
 
 
 
+class AdminOrderListSerializer(CustomerOrderListSerializer):
+    is_guest = serializers.BooleanField(
+        read_only=True,
+    )
+
+    class Meta(CustomerOrderListSerializer.Meta):
+        fields = CustomerOrderListSerializer.Meta.fields + (
+            "customer_name",
+            "phone",
+            "address",
+            "is_guest",
+        )
+
+        read_only_fields = fields
+
+
+class AdminOrderQuerySerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=(
+            "all",
+            "pending",
+            "paid",
+            "shipped",
+            "delivered",
+            "cancelled",
+        ),
+        required=False,
+        default="all",
+    )
+
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=100,
+        trim_whitespace=True,
+    )
+
+
+class AdminOrderDetailSerializer(CustomerOrderDetailSerializer):
+    user_id = serializers.IntegerField(
+        read_only=True,
+    )
+
+    is_guest = serializers.BooleanField(
+        read_only=True,
+    )
+
+    stock_restored_at = serializers.DateTimeField(
+        read_only=True,
+    )
+
+    class Meta(CustomerOrderDetailSerializer.Meta):
+        fields = CustomerOrderDetailSerializer.Meta.fields + (
+            "user_id",
+            "is_guest",
+            "stock_restored_at",
+        )
+
+        read_only_fields = fields
+
+
+class AdminOrderStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=("shipped", "delivered"),
+    )
+
+    def validate(self, attrs):
+        allowed_fields = {"status"}
+
+        unexpected = set(self.initial_data) - allowed_fields
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(unexpected)
+            })
+
+        return attrs

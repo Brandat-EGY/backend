@@ -256,3 +256,122 @@ class CartItemAddAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+
+class CartUpdateDeleteAPITests(APITestCase):
+
+    def setUp(self):
+        self.product = Product.objects.create(
+            name_ar="سيروم مرطب",
+            description_ar="سيروم للبشرة",
+            is_available=True,
+        )
+
+        self.variant = ProductVariant.objects.create(
+            product=self.product,
+            price=Decimal("200.00"),
+            stock=5,
+            is_active=True,
+        )
+
+        self.item_key = f"variant:{self.variant.pk}"
+
+        self.item_url = reverse(
+            "cart-item-detail",
+            kwargs={"item_key": self.item_key},
+        )
+
+        self.cart_url = reverse("cart-detail")
+
+        session = self.client.session
+        session[Cart.SESSION_KEY] = {
+            self.item_key: {"quantity": 3}
+        }
+        session.save()
+
+    def test_update_quantity(self):
+        response = self.client.patch(
+            self.item_url,
+            {"quantity": 2},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["item"]["quantity"], 2
+        )
+
+        cart_response = self.client.get(self.cart_url)
+
+        self.assertEqual(
+            cart_response.data["total_price"],
+            "400.00",
+        )
+
+    def test_update_exceeds_stock(self):
+        response = self.client.patch(
+            self.item_url,
+            {"quantity": 10},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 409)
+
+        cart_response = self.client.get(self.cart_url)
+
+        self.assertEqual(
+            cart_response.data["items"][0]["quantity"],
+            3,
+        )
+
+    def test_zero_quantity_is_rejected(self):
+        response = self.client.patch(
+            self.item_url,
+            {"quantity": 0},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_delete_cart_item(self):
+        response = self.client.delete(self.item_url)
+
+        self.assertEqual(response.status_code, 204)
+
+        cart_response = self.client.get(self.cart_url)
+
+        self.assertEqual(cart_response.data["count"], 0)
+
+    def test_clear_cart(self):
+        response = self.client.delete(self.cart_url)
+
+        self.assertEqual(response.status_code, 204)
+
+        cart_response = self.client.get(self.cart_url)
+
+        self.assertEqual(cart_response.data["items"], [])
+
+    def test_missing_cart_item_returns_404(self):
+        url = reverse(
+            "cart-item-detail",
+            kwargs={"item_key": "variant:999999"},
+        )
+
+        response = self.client.patch(
+            url,
+            {"quantity": 1},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_cart_key_returns_400(self):
+        url = reverse(
+            "cart-item-detail",
+            kwargs={"item_key": "invalid:1"},
+        )
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 400)

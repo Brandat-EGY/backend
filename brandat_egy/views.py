@@ -1,5 +1,6 @@
 from django.utils import timezone
 from decimal import Decimal
+import re
 
 from django.db.models import Exists, OuterRef, Prefetch, Count, Q
 from django.db import transaction
@@ -23,7 +24,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 
 from collections import defaultdict
 
@@ -36,6 +37,7 @@ from .catalog_search import apply_product_search
 from .image_storage import delete_unused_product_image_file
 from .box_catalog import get_box_catalog_queryset
 from .cart import Cart
+from .services import create_order_from_cart, cancel_order 
 
 
 
@@ -64,6 +66,16 @@ from .serializers import (
     DailyOfferListSerializer,
     CartItemSerializer,
     CartAddItemSerializer,
+    CartUpdateQuantitySerializer,
+    CheckoutSerializer,
+    CustomerOrderListSerializer,
+    CustomerOrderDetailSerializer,
+    ReviewListSerializer,
+    ReviewCreateSerializer,
+    AdminOrderListSerializer,
+    AdminOrderQuerySerializer,
+    AdminOrderDetailSerializer,
+    AdminOrderStatusSerializer,
 )
 from .models import (
     Product, 
@@ -77,6 +89,11 @@ from .models import (
     Collection,
     BoxImage,
     BoxItem,
+    Order,
+    OrderItem,
+    OrderBox,
+    OrderBoxItem,
+    Review,
 
 )
 
@@ -516,6 +533,15 @@ class CartDetailAPIView(APIView):
         })
     
 
+    def delete(self, request):
+        cart = Cart(request)
+        cart.clear()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
+    
+
 @method_decorator(csrf_protect, name="dispatch")
 class CartItemAddAPIView(APIView):
     permission_classes = [AllowAny]
@@ -587,6 +613,334 @@ class CartItemAddAPIView(APIView):
                 if created
                 else status.HTTP_200_OK
             ),
+        )
+    
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class CartItemDetailAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get_cart_and_key(self, request, item_key):
+        match = re.fullmatch(
+            r"(variant|box):([1-9][0-9]*)",
+            item_key,
+        )
+
+        if match is None:
+            raise ValidationError({
+                "key": "Invalid cart item key."
+            })
+
+        cart = Cart(request)
+
+        if item_key not in cart.cart:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Item is not in the cart.")
+
+        return cart, match.group(1), int(match.group(2))
+
+    def patch(self, request, item_key):
+        serializer = CartUpdateQuantitySerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        cart, item_type, item_id = (
+            self.get_cart_and_key(request, item_key)
+        )
+
+        if item_type == "variant":
+            item = get_object_or_404(
+                ProductVariant.objects.select_related(
+                    "product"
+                ),
+                pk=item_id,
+            )
+        else:
+            item = get_object_or_404(
+                Box,
+                pk=item_id,
+            )
+
+        quantity = serializer.validated_data["quantity"]
+
+        try:
+            cart.update(item, quantity)
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        price = item.final_price
+
+        cart_item = {
+            "key": item_key,
+            "type": item_type,
+            "item": item,
+            "quantity": quantity,
+            "price": price,
+            "total_price": price * quantity,
+        }
+
+        response_serializer = CartItemSerializer(
+            cart_item,
+            context={"request": request},
+        )
+
+        return Response({
+            "item": response_serializer.data,
+        })
+
+    def delete(self, request, item_key):
+        cart, item_type, item_id = (
+            self.get_cart_and_key(request, item_key)
+        )
+
+        # Remove using the session key directly.
+        # The item may have been deleted from the DB.
+        del cart.cart[item_key]
+        cart.save()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class CheckoutAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = CheckoutSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
+        cart = Cart(request)
+
+        user = (
+            request.user
+            if request.user.is_authenticated
+            else None
+        )
+
+        try:
+            order = create_order_from_cart(
+                cart=cart,
+                customer_name=data["customer_name"],
+                phone=data["phone"],
+                email=data["email"],
+                address=data["address"],
+                user=user,
+                session_key=request.session.session_key,
+            )
+
+        except ValueError as exc:
+            message = str(exc)
+
+            http_status = (
+                status.HTTP_400_BAD_REQUEST
+                if message == "Your cart is empty"
+                else status.HTTP_409_CONFLICT
+            )
+
+            return Response(
+                {"detail": message},
+                status=http_status,
+            )
+
+        return Response(
+            {
+                "order_id": order.pk,
+                "status": order.status,
+                "total_price": (
+                    f"{order.total_price:.2f}"
+                ),
+                "created_at": order.created_at,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    
+
+class CustomerOrderAccessMixin:
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_authenticated:
+            queryset = Order.objects.filter(
+                user=user,
+            )
+        else:
+            session_key = self.request.session.session_key
+
+            if not session_key:
+                return Order.objects.none()
+
+            queryset = Order.objects.filter(
+                user__isnull=True,
+                session_key=session_key,
+            )
+
+        order_items = (
+            OrderItem.objects
+            .select_related("variant__product")
+            .order_by("pk")
+        )
+
+        order_box_items = (
+            OrderBoxItem.objects
+            .order_by("pk")
+        )
+
+        order_boxes = (
+            OrderBox.objects
+            .prefetch_related(
+                Prefetch(
+                    "items",
+                    queryset=order_box_items,
+                )
+            )
+            .order_by("pk")
+        )
+
+        return (
+            queryset
+            .prefetch_related(
+                Prefetch(
+                    "items",
+                    queryset=order_items,
+                ),
+                Prefetch(
+                    "boxes",
+                    queryset=order_boxes,
+                ),
+            )
+            .order_by("-created_at", "-pk")
+        )
+
+
+class CustomerOrderListAPIView(CustomerOrderAccessMixin,ListAPIView,):
+    permission_classes = [AllowAny]
+
+    serializer_class = CustomerOrderListSerializer
+    pagination_class = ProductPagination
+
+
+class CustomerOrderDetailAPIView(CustomerOrderAccessMixin,RetrieveAPIView,):
+    permission_classes = [AllowAny]
+
+    serializer_class = CustomerOrderDetailSerializer
+
+    lookup_field = "pk"
+    lookup_url_kwarg = "order_id"
+
+
+
+class ReviewListAPIView(ListAPIView):
+    permission_classes = [AllowAny]
+
+    serializer_class = ReviewListSerializer
+    pagination_class = ProductPagination
+
+    def get_queryset(self):
+        product = get_object_or_404(
+            Product,
+            pk=self.kwargs["product_id"],
+            is_available=True,
+        )
+
+        return (
+            Review.objects
+            .filter(
+                order_item__variant__product=product,
+            )
+            .order_by("-created_at", "-pk")
+        )
+    
+    def post(self, request, product_id):
+        product = get_object_or_404(
+            Product,
+            pk=product_id,
+            is_available=True,
+        )
+
+        serializer = ReviewCreateSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
+        order_items = (
+            OrderItem.objects
+            .select_related("order", "variant")
+        )
+
+        if request.user.is_authenticated:
+            order_items = order_items.filter(
+                order__user=request.user,
+            )
+        else:
+            session_key = request.session.session_key
+
+            if not session_key:
+                raise NotFound(
+                    "Order item not found."
+                )
+
+            order_items = order_items.filter(
+                order__user__isnull=True,
+                order__session_key=session_key,
+            )
+
+        with transaction.atomic():
+            order_item = get_object_or_404(
+                order_items.select_for_update(
+                    of=("self",)
+                ),
+                pk=data["order_item_id"],
+                variant__product_id=product.pk,
+            )
+
+            if order_item.order.status != "delivered":
+                raise ValidationError({
+                    "order_item_id": (
+                        "Only delivered orders "
+                        "can be reviewed."
+                    )
+                })
+
+            if Review.objects.filter(
+                order_item=order_item
+            ).exists():
+                return Response(
+                    {
+                        "detail": (
+                            "This order item has "
+                            "already been reviewed."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            review = Review.objects.create(
+                order_item=order_item,
+                name=data["name"],
+                rating=data["rating"],
+                comment=data["comment"],
+            )
+
+        response_serializer = ReviewListSerializer(
+            review
+        )
+
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -1149,3 +1503,175 @@ class AdminBrandDetailAPIView(RetrieveUpdateAPIView):
         "head",
         "options",
     ]
+
+
+class AdminOrderListAPIView(ListAPIView):
+    serializer_class = AdminOrderListSerializer
+    permission_classes = [IsAdminUser]
+    pagination_class = ProductPagination
+
+    def get_queryset(self):
+        query_serializer = AdminOrderQuerySerializer(
+            data=self.request.query_params.dict()
+        )
+
+        query_serializer.is_valid(
+            raise_exception=True
+        )
+
+        filters = query_serializer.validated_data
+
+        queryset = Order.objects.all()
+
+        order_status = filters["status"]
+
+        if order_status != "all":
+            queryset = queryset.filter(
+                status=order_status
+            )
+
+        search = filters.get("search", "")
+
+        if search:
+            search_filter = (
+                Q(customer_name__icontains=search)
+                | Q(phone__icontains=search)
+            )
+
+            if search.isdecimal() and len(search) <= 18:
+                search_filter |= Q(pk=int(search))
+
+            queryset = queryset.filter(search_filter)
+
+        return (
+            queryset
+            .prefetch_related(
+                "items",
+                "boxes",
+            )
+            .order_by("-created_at", "-pk")
+        )
+    
+
+def get_admin_order_detail_queryset():
+    return (
+        Order.objects
+        .select_related("user")
+        .prefetch_related(
+            "items__variant__product",
+            "boxes__items",
+        )
+    )
+
+class AdminOrderDetailAPIView(RetrieveAPIView):
+    permission_classes = [IsAdminUser]
+
+    serializer_class = AdminOrderDetailSerializer
+
+    lookup_field = "pk"
+    lookup_url_kwarg = "order_id"
+
+    def get_queryset(self):
+        return get_admin_order_detail_queryset()
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminOrderStatusAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, order_id):
+        serializer = AdminOrderStatusSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        new_status = serializer.validated_data["status"]
+
+        allowed_transitions = {
+            "pending": "shipped",
+            "shipped": "delivered",
+        }
+
+        with transaction.atomic():
+            order = get_object_or_404(
+                Order.objects.select_for_update(),
+                pk=order_id,
+            )
+
+            if order.status == new_status:
+                changed = False
+
+            elif allowed_transitions.get(order.status) != new_status:
+                return Response(
+                    {
+                        "detail": (
+                            f"Cannot change order status "
+                            f"from {order.status} "
+                            f"to {new_status}."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            else:
+                order.status = new_status
+                order.save(
+                    update_fields=[
+                        "status",
+                        "updated_at",
+                    ]
+                )
+                changed = True
+
+        order = get_object_or_404(
+            get_admin_order_detail_queryset(),
+            pk=order_id,
+        )
+
+        return Response({
+            "changed": changed,
+            "order": AdminOrderDetailSerializer(
+                order,
+                context={"request": request},
+            ).data,
+        })
+    
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminOrderCancelAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, order_id):
+        if request.data:
+            raise ValidationError({
+                "detail": (
+                    "Cancellation does not accept "
+                    "a request body."
+                )
+            })
+
+        try:
+            cancel_order(order_id=order_id)
+
+        except Order.DoesNotExist:
+            raise NotFound("Order not found.")
+
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        order = get_object_or_404(
+            get_admin_order_detail_queryset(),
+            pk=order_id,
+        )
+
+        return Response({
+            "detail": "Order cancelled successfully.",
+            "order": AdminOrderDetailSerializer(
+                order,
+                context={"request": request},
+            ).data,
+        })
