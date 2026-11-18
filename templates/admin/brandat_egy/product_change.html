@@ -1,0 +1,271 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+{% endblock %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<form class="studio-page" id="product_form" method="post" enctype="multipart/form-data" data-testid="product-detail">
+    {% csrf_token %}
+    {% if errors %}{% include "unfold/helpers/messages/errornote.html" %}{% endif %}
+    {{ adminform.form.non_field_errors }}
+
+    <div class="studio-head">
+        <div>
+            <h1>إضافة / تعديل منتج</h1>
+            <p>أنشئ منتجًا جديدًا أو عدّل منتجًا موجودًا.</p>
+        </div>
+    </div>
+
+    <div class="product-columns">
+        <div class="product-stack">
+            <section class="studio-card">
+                <h2><span class="material-symbols-outlined">image</span> صور المنتج</h2>
+                {% for inline_admin_formset in inline_admin_formsets %}
+                    {% if inline_admin_formset.formset.prefix == "images" %}
+                    <div class="formset-wrapper">
+                        {{ inline_admin_formset.formset.management_form }}
+                        {{ inline_admin_formset.formset.non_form_errors }}
+                        <div class="formset studio-photos" data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
+                            {% for inline_admin_form in inline_admin_formset %}
+                            <div class="form-group studio-photo-card product-photo{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}">
+                                <div class="form-row">
+                                    {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+                                    {% if inline_admin_form.pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
+                                    {% if inline_admin_form.original and inline_admin_form.original.image %}
+                                    <div class="studio-photo-frame">
+                                        <button type="button" class="product-zoom" data-testid="product-image-zoom" data-src="{{ inline_admin_form.original.image.url }}" aria-label="تكبير الصورة">
+                                            <img src="{{ inline_admin_form.original.image.url }}" alt="">
+                                        </button>
+                                        <label class="product-photo-change">
+                                            غيّر الصورة
+                                            {{ inline_admin_form.form.image }}
+                                        </label>
+                                    </div>
+                                    {% else %}
+                                    <label class="studio-photo-frame studio-photo-frame--empty">
+                                        <span class="material-symbols-outlined">add_photo_alternate</span>
+                                        <span>ارفع صورة</span>
+                                        {{ inline_admin_form.form.image }}
+                                    </label>
+                                    {% endif %}
+                                    {{ inline_admin_form.form.image.errors }}
+                                    <div class="studio-photo-actions">
+                                        <label class="studio-check">
+                                            {{ inline_admin_form.form.is_main }}
+                                            رئيسية
+                                        </label>
+                                    </div>
+                                    {% if inline_admin_form.original %}
+                                    <label class="product-photo-remove" aria-label="شيل الصورة">
+                                        {{ inline_admin_form.deletion_field.field }}
+                                        <span class="material-symbols-outlined">close</span>
+                                    </label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if inline_admin_formset.has_add_permission %}
+                            <div class="form-actions">
+                                <button type="button" class="add-row product-add-variant" data-testid="product-add-image">+ ارفع صورة</button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </section>
+
+            <section class="studio-card">
+                <h2><span class="material-symbols-outlined">inventory_2</span> بيانات المنتج</h2>
+                <div class="studio-fields">
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.name_en.id_for_label }}">اسم المنتج بالإنجليزي</label>
+                        {{ adminform.form.name_en }}
+                        {{ adminform.form.name_en.errors }}
+                    </div>
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.name_ar.id_for_label }}">اسم المنتج بالعربي</label>
+                        {{ adminform.form.name_ar }}
+                        {{ adminform.form.name_ar.errors }}
+                    </div>
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.brand.id_for_label }}">الماركة</label>
+                        {{ adminform.form.brand }}
+                        {{ adminform.form.brand.errors }}
+                    </div>
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.category.id_for_label }}">التصنيف</label>
+                        {{ adminform.form.category }}
+                        {{ adminform.form.category.errors }}
+                    </div>
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.scanned_code.id_for_label }}">الباركود</label>
+                        {{ adminform.form.scanned_code }}
+                        {{ adminform.form.scanned_code.errors }}
+                    </div>
+                    <div class="studio-field">
+                        <span class="studio-label">الحالة</span>
+                        <label class="studio-check">
+                            {{ adminform.form.is_available }}
+                            ظاهر للبيع
+                        </label>
+                        {{ adminform.form.is_available.errors }}
+                    </div>
+                </div>
+            </section>
+
+            <section class="studio-card">
+                <h2><span class="material-symbols-outlined">payments</span> الخيارات والسعر</h2>
+                {% for inline_admin_formset in inline_admin_formsets %}
+                    {% if inline_admin_formset.formset.prefix == "variants" %}
+                    <div class="formset-wrapper shop-variant-set">
+                        {{ inline_admin_formset.formset.management_form }}
+                        {{ inline_admin_formset.formset.non_form_errors }}
+                        <div class="formset shop-variant-list" data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
+                            <p class="shop-variant-empty" data-testid="variant-empty">أضف خيارًا عشان المنتج يتباع.</p>
+                            {% for inline_admin_form in inline_admin_formset %}
+                            <article class="form-group shop-variant-card{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}" data-testid="variant-card">
+                                <div class="form-row">
+                                    {% for hidden in inline_admin_form.form.hidden_fields %}
+                                    <input type="hidden" name="{{ hidden.html_name }}" value="{{ hidden.value|default_if_none:'' }}" form="product_form"{% if hidden.auto_id %} id="{{ hidden.auto_id }}"{% endif %}>
+                                    {% endfor %}
+                                    <div class="shop-variant-head">
+                                        <strong>
+                                            {% if inline_admin_form.original and inline_admin_form.original.size %}
+                                            {{ inline_admin_form.original.size }}
+                                            {% elif inline_admin_form.original and inline_admin_form.original.shade_ar %}
+                                            {{ inline_admin_form.original.shade_ar }}
+                                            {% else %}
+                                            خيار جديد
+                                            {% endif %}
+                                        </strong>
+                                        {% if inline_admin_form.deletion_field %}
+                                        <label class="studio-trash" aria-label="شيل الخيار">
+                                            {{ inline_admin_form.deletion_field.field }}
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </label>
+                                        {% endif %}
+                                    </div>
+                                    <p class="shop-variant-removed">الخيار ده هيتحذف لما تحفظ.</p>
+                                    {{ inline_admin_form.form.non_field_errors }}
+                                    <div class="shop-variant-grid">
+                                        <label class="shop-variant-field">
+                                            <span>السعر</span>
+                                            {{ inline_admin_form.form.price }}
+                                            {{ inline_admin_form.form.price.errors }}
+                                        </label>
+                                        <label class="shop-variant-field">
+                                            <span>سعر الخصم</span>
+                                            {{ inline_admin_form.form.discount_price }}
+                                            {{ inline_admin_form.form.discount_price.errors }}
+                                        </label>
+                                        <label class="shop-variant-field">
+                                            <span>الكمية</span>
+                                            {{ inline_admin_form.form.stock }}
+                                            {{ inline_admin_form.form.stock.errors }}
+                                        </label>
+                                        <label class="shop-variant-field">
+                                            <span>الحجم</span>
+                                            {{ inline_admin_form.form.size }}
+                                            {{ inline_admin_form.form.size.errors }}
+                                        </label>
+                                        <label class="shop-variant-field">
+                                            <span>الدرجة بالعربي</span>
+                                            {{ inline_admin_form.form.shade_ar }}
+                                            {{ inline_admin_form.form.shade_ar.errors }}
+                                        </label>
+                                        <label class="shop-variant-field">
+                                            <span>الدرجة بالإنجليزي</span>
+                                            {{ inline_admin_form.form.shade_en }}
+                                            {{ inline_admin_form.form.shade_en.errors }}
+                                        </label>
+                                    </div>
+                                    <label class="shop-variant-field field-is_active">
+                                        <span>ظاهر للبيع</span>
+                                        {{ inline_admin_form.form.is_active }}
+                                        {{ inline_admin_form.form.is_active.errors }}
+                                    </label>
+                                    {% if inline_admin_form.original %}
+                                    <p class="product-sku">الكود {{ inline_admin_form.original.sku }}</p>
+                                    {% endif %}
+                                </div>
+                            </article>
+                            {% endfor %}
+                            {% if inline_admin_formset.has_add_permission %}
+                            <div class="form-actions">
+                                <button type="button" class="add-row product-add-variant" data-testid="add-variant">+ أضف خيار</button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </section>
+        </div>
+
+        <div class="product-stack">
+            <section class="studio-card product-copy">
+                <h2><span class="material-symbols-outlined">notes</span> الوصف بالعربي</h2>
+                {{ adminform.form.description_ar }}
+                {{ adminform.form.description_ar.errors }}
+            </section>
+            <section class="studio-card product-copy">
+                <h2><span class="material-symbols-outlined">notes</span> الوصف بالإنجليزي</h2>
+                {{ adminform.form.description_en }}
+                {{ adminform.form.description_en.errors }}
+            </section>
+        </div>
+    </div>
+
+    <section class="studio-card product-savebar">
+        <a class="studio-btn-ghost" data-testid="product-cancel" href="{% url 'admin:brandat_egy_product_changelist' %}">إلغاء</a>
+        <button class="studio-btn-primary" type="submit" name="_save" data-testid="product-save">احفظ المنتج</button>
+    </section>
+</form>
+<div class="product-lightbox" data-testid="product-lightbox" hidden>
+    <button type="button" class="product-lightbox-close" data-testid="product-lightbox-close" aria-label="إغلاق">
+        <span class="material-symbols-outlined">close</span>
+    </button>
+    <img alt="" data-testid="product-lightbox-image">
+</div>
+<script>
+(function () {
+    var root = document.querySelector("[data-testid='product-detail']");
+    var lightbox = document.querySelector("[data-testid='product-lightbox']");
+    var image = document.querySelector("[data-testid='product-lightbox-image']");
+    if (!root || !lightbox || !image) return;
+    function openLightbox(src) {
+        image.src = src;
+        lightbox.hidden = false;
+    }
+    function closeLightbox() {
+        lightbox.hidden = true;
+        image.removeAttribute("src");
+    }
+    function onClick(event) {
+        var zoom = event.target.closest("[data-testid='product-image-zoom']");
+        if (zoom) {
+            openLightbox(zoom.getAttribute("data-src"));
+            return;
+        }
+        if (event.target === lightbox || event.target.closest("[data-testid='product-lightbox-close']")) {
+            closeLightbox();
+        }
+    }
+    function onKey(event) {
+        if (event.key === "Escape") closeLightbox();
+    }
+    document.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("pagehide", function () {
+        document.removeEventListener("click", onClick);
+        document.removeEventListener("keydown", onKey);
+    }, { once: true });
+})();
+</script>
+{% endblock %}

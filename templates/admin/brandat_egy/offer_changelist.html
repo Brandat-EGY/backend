@@ -1,0 +1,161 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_ui %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="offers-page">
+    <div class="studio-head">
+        <div>
+            <h1>عروض اليوم</h1>
+            <p>عروض لفترة محدودة على المنتجات والبوكسات</p>
+        </div>
+        <div class="studio-actions">
+            <a class="studio-btn" data-testid="offer-export" href="?{{ request.GET.urlencode }}{% if request.GET %}&{% endif %}export=1">
+                <span class="material-symbols-outlined">download</span>
+                تصدير
+            </a>
+            {% if has_add_permission %}
+            <a class="studio-btn-primary" data-testid="offer-add" href="{% url 'admin:brandat_egy_dailyoffer_add' %}">
+                <span class="material-symbols-outlined">add</span>
+                أضف عرض
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="studio-kpis">
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon"><span class="material-symbols-outlined">sell</span></span>
+            <strong>{{ offer_stats.total }}</strong>
+            <span class="studio-muted">كل العروض</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon studio-kpi-icon--green"><span class="material-symbols-outlined">bolt</span></span>
+            <strong>{{ offer_stats.running }}</strong>
+            <span class="studio-muted">شغّالة دلوقتي</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon studio-kpi-icon--blue"><span class="material-symbols-outlined">calendar_month</span></span>
+            <strong>{{ offer_stats.scheduled }}</strong>
+            <span class="studio-muted">لسه ما بدأتش</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon studio-kpi-icon--amber"><span class="material-symbols-outlined">history</span></span>
+            <strong>{{ offer_stats.ended }}</strong>
+            <span class="studio-muted">خلّصت</span>
+        </article>
+    </div>
+
+    <div class="studio-toolbar">
+        <form method="get">
+            <input type="search" name="q" value="{{ cl.query }}" placeholder="ابحث باسم المنتج..." data-testid="offer-search">
+            <select name="deal" data-testid="offer-status-filter" aria-label="حالة العرض">
+                <option value="">كل الحالات</option>
+                <option value="running" {% if request.GET.deal == "running" %}selected{% endif %}>شغّال</option>
+                <option value="scheduled" {% if request.GET.deal == "scheduled" %}selected{% endif %}>لم يبدأ</option>
+                <option value="ended" {% if request.GET.deal == "ended" %}selected{% endif %}>انتهى</option>
+                <option value="stopped" {% if request.GET.deal == "stopped" %}selected{% endif %}>متوقف</option>
+            </select>
+            <select name="category" data-testid="offer-category-filter" aria-label="التصنيف">
+                <option value="">كل التصنيفات</option>
+                {% for category in offer_categories %}
+                <option value="{{ category.pk }}" {% if request.GET.category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name_ar }}</option>
+                {% endfor %}
+            </select>
+            <input type="date" name="start" value="{{ request.GET.start }}" aria-label="من تاريخ" data-testid="offer-start">
+            <button class="studio-btn-primary" type="submit" data-testid="offer-filter">تصفية</button>
+        </form>
+    </div>
+
+    <section class="studio-card">
+        <h2>عروض اليوم ({{ cl.result_count }})</h2>
+        <div class="studio-table-wrap">
+            <table class="studio-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th>السعر الأصلي</th>
+                        <th>سعر العرض</th>
+                        <th>الخصم</th>
+                        <th>البداية</th>
+                        <th>النهاية</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for offer in cl.result_list %}
+                    <tr>
+                        <td class="studio-muted">{{ forloop.counter }}</td>
+                        <td>
+                            <a class="studio-product" data-testid="offer-row-{{ offer.pk }}" href="{% url 'admin:brandat_egy_dailyoffer_change' offer.pk %}">
+                                {% if offer.variant %}
+                                    {% with photo=offer.variant.product.images.all|first %}
+                                    {% if photo %}<img src="{{ photo.image.url }}" alt="">{% else %}<span class="studio-thumb">{{ offer.variant.product.name_ar|slice:":1" }}</span>{% endif %}
+                                    {% endwith %}
+                                    <span>{{ offer.variant.product.name_ar }}<small>{{ offer.variant.size }}</small></span>
+                                {% elif offer.box %}
+                                    {% with photo=offer.box.images.all|first %}
+                                    {% if photo %}<img src="{{ photo.image.url }}" alt="">{% else %}<span class="studio-thumb">{{ offer.box.name_ar|slice:":1" }}</span>{% endif %}
+                                    {% endwith %}
+                                    <span>{{ offer.box.name_ar }}<small>بوكس</small></span>
+                                {% else %}
+                                    <span class="studio-thumb">?</span>
+                                    <span>عرض</span>
+                                {% endif %}
+                            </a>
+                        </td>
+                        <td>
+                            {% if offer.variant %}{{ offer.variant.price|floatformat:0 }}{% elif offer.box %}{{ offer.box.price|floatformat:0 }}{% else %}—{% endif %} ج.م
+                        </td>
+                        <td>{{ offer.price|floatformat:0 }} ج.م</td>
+                        <td><span class="studio-pill studio-pill--rose">-{{ offer.discount_percent }}%</span></td>
+                        <td>{{ offer.starts_at|date:"j M Y" }}</td>
+                        <td>{{ offer.ends_at|date:"j M Y" }}</td>
+                        <td>
+                            {% if offer.offer_status == "running" %}
+                            <span class="studio-pill">شغّال</span>
+                            {% elif offer.offer_status == "scheduled" %}
+                            <span class="studio-pill studio-pill--blue">لم يبدأ</span>
+                            {% elif offer.offer_status == "ended" %}
+                            <span class="studio-pill studio-pill--amber">انتهى</span>
+                            {% else %}
+                            <span class="studio-pill studio-pill--red">متوقف</span>
+                            {% endif %}
+                        </td>
+                        <td class="studio-inline-actions">
+                            <a class="studio-btn" href="{% url 'admin:brandat_egy_dailyoffer_change' offer.pk %}" aria-label="تعديل العرض" data-testid="offer-edit-{{ offer.pk }}">
+                                <span class="material-symbols-outlined">edit</span>
+                            </a>
+                            <a class="studio-btn" href="{% url 'admin:brandat_egy_dailyoffer_delete' offer.pk %}" aria-label="حذف العرض" data-testid="offer-delete-{{ offer.pk }}">
+                                <span class="material-symbols-outlined">delete</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="studio-muted">لا توجد عروض بعد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="studio-pager">
+            <span>عرض {{ cl.result_list|length }} من {{ cl.result_count }}</span>
+            <span class="studio-inline-actions">
+                {% if cl.page_num != 1 %}
+                    {% with prev_page=cl.page_num|add:"-1" %}
+                    <a class="studio-btn" href="{% page_query request prev_page %}" data-testid="offers-prev">السابق</a>
+                    {% endwith %}
+                {% endif %}
+                <span class="studio-btn-primary">{{ cl.page_num }}</span>
+                {% if cl.page_num != cl.paginator.num_pages %}
+                    {% with next_page=cl.page_num|add:"1" %}
+                    <a class="studio-btn" href="{% page_query request next_page %}" data-testid="offers-next">التالي</a>
+                    {% endwith %}
+                {% endif %}
+            </span>
+        </div>
+    </section>
+</section>
+{% endblock %}

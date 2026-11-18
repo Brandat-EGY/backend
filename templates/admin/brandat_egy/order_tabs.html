@@ -1,0 +1,27 @@
+{% load i18n %}
+<nav class="bd-tabs" data-testid="order-status-tabs">
+    <a class="bd-tab {% if not request.GET.status__exact %}is-active{% endif %}" data-testid="order-tab-all" href="?">
+        {% trans "All orders" %}
+        <span>{{ order_tab_counts.all }}</span>
+    </a>
+    <a class="bd-tab {% if request.GET.status__exact == 'confirmed' %}is-active{% endif %}" data-testid="order-tab-confirmed" href="?status__exact=confirmed">
+        {% trans "Confirmed" %}
+        <span>{{ order_tab_counts.confirmed }}</span>
+    </a>
+    <a class="bd-tab {% if request.GET.status__exact == 'preparing' %}is-active{% endif %}" data-testid="order-tab-preparing" href="?status__exact=preparing">
+        {% trans "Preparing" %}
+        <span>{{ order_tab_counts.preparing }}</span>
+    </a>
+    <a class="bd-tab {% if request.GET.status__exact == 'shipped' %}is-active{% endif %}" data-testid="order-tab-shipped" href="?status__exact=shipped">
+        {% trans "Shipped" %}
+        <span>{{ order_tab_counts.shipped }}</span>
+    </a>
+    <a class="bd-tab {% if request.GET.status__exact == 'delivered' %}is-active{% endif %}" data-testid="order-tab-delivered" href="?status__exact=delivered">
+        {% trans "Delivered" %}
+        <span>{{ order_tab_counts.delivered }}</span>
+    </a>
+    <a class="bd-tab {% if request.GET.status__exact == 'cancelled' %}is-active{% endif %}" data-testid="order-tab-cancelled" href="?status__exact=cancelled">
+        {% trans "Cancelled" %}
+        <span>{{ order_tab_counts.cancelled }}</span>
+    </a>
+</nav>

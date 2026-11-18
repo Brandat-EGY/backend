@@ -34,16 +34,22 @@ from .catalog import get_catalog_queryset
 from .pagination import ProductPagination
 from .catalog_filters import apply_catalog_filters
 from .catalog_search import apply_product_search
-from .image_storage import delete_unused_product_image_file
+from .image_storage import delete_unused_product_image_file, delete_unused_box_image_file
 from .box_catalog import get_box_catalog_queryset
 from .cart import Cart
 from .services import create_order_from_cart, cancel_order 
+from .image_services import (
+    create_image,
+    set_main_image,
+    delete_image,
+)
 
 
 
 
 from .serializers import (
-    FavoriteProductSerializer, 
+    FavoriteProductSerializer,
+    DailyOfferListSerializer,
     BrandSerializer, 
     CategorySerializer, 
     ProductListSerializer, 
@@ -63,7 +69,6 @@ from .serializers import (
     BoxDetailSerializer,
     CollectionListSerializer,
     CollectionDetailSerializer,
-    DailyOfferListSerializer,
     CartItemSerializer,
     CartAddItemSerializer,
     CartUpdateQuantitySerializer,
@@ -72,10 +77,27 @@ from .serializers import (
     CustomerOrderDetailSerializer,
     ReviewListSerializer,
     ReviewCreateSerializer,
+    BoxReviewCreateSerializer,
     AdminOrderListSerializer,
     AdminOrderQuerySerializer,
     AdminOrderDetailSerializer,
     AdminOrderStatusSerializer,
+    AdminCategorySerializer,
+    AdminCategoryQuerySerializer,
+    AdminBoxWriteSerializer,
+    AdminBoxListSerializer,
+    AdminBoxDetailSerializer,
+    AdminBoxQuerySerializer,
+    AdminBoxItemCreateSerializer,
+    AdminBoxItemUpdateSerializer,
+    AdminBoxImageCreateSerializer,
+    BoxItemSerializer,
+    BoxImageSerializer,
+    AdminCollectionWriteSerializer,
+    AdminCollectionQuerySerializer,
+    AdminCollectionListSerializer,
+    AdminCollectionDetailSerializer,
+    AdminCollectionBoxAddSerializer,
 )
 from .models import (
     Product, 
@@ -94,6 +116,7 @@ from .models import (
     OrderBox,
     OrderBoxItem,
     Review,
+    ShippingRate,
 
 )
 
@@ -177,7 +200,7 @@ class BrandListAPIView(ListAPIView):
     permission_classes = [AllowAny]
 
     serializer_class = BrandSerializer
-    pagination_class = None
+    pagination_class = ProductPagination
 
     def get_queryset(self):
         return Brand.objects.filter(
@@ -404,7 +427,8 @@ class CollectionListAPIView(ListAPIView):
                     distinct=True,
                 )
             )
-            .order_by("name_en", "pk")
+            .filter(boxes_count__gt=0)
+            .order_by("name_ar", "pk")
         )
     
 
@@ -428,6 +452,7 @@ class CollectionDetailAPIView(RetrieveAPIView):
                     distinct=True,
                 )
             )
+            .filter(boxes_count__gt=0)
             .prefetch_related(
                 Prefetch(
                     "boxes",
@@ -708,6 +733,21 @@ class CartItemDetailAPIView(APIView):
         )
 
 
+class ShippingRateListAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        rates = ShippingRate.objects.filter(is_active=True).order_by("name_ar")
+        return Response([
+            {
+                "id": rate.pk,
+                "name_ar": rate.name_ar,
+                "fee": f"{rate.fee:.2f}",
+            }
+            for rate in rates
+        ])
+
+
 @method_decorator(csrf_protect, name="dispatch")
 class CheckoutAPIView(APIView):
     permission_classes = [AllowAny]
@@ -735,6 +775,7 @@ class CheckoutAPIView(APIView):
                 phone=data["phone"],
                 email=data["email"],
                 address=data["address"],
+                governorate=data["governorate"],
                 user=user,
                 session_key=request.session.session_key,
             )
@@ -759,6 +800,10 @@ class CheckoutAPIView(APIView):
                 "status": order.status,
                 "total_price": (
                     f"{order.total_price:.2f}"
+                ),
+                "shipping_fee": f"{order.shipping_fee:.2f}",
+                "governorate": (
+                    order.governorate.name_ar if order.governorate_id else ""
                 ),
                 "created_at": order.created_at,
             },
@@ -944,6 +989,101 @@ class ReviewListAPIView(ListAPIView):
         )
 
 
+class BoxReviewListAPIView(ListAPIView):
+    permission_classes = [AllowAny]
+
+    serializer_class = ReviewListSerializer
+    pagination_class = ProductPagination
+
+    def get_queryset(self):
+        box = get_object_or_404(
+            Box,
+            pk=self.kwargs["box_id"],
+            is_active=True,
+        )
+
+        return (
+            Review.objects
+            .filter(order_box__box=box)
+            .order_by("-created_at", "-pk")
+        )
+
+    def post(self, request, box_id):
+        box = get_object_or_404(
+            Box,
+            pk=box_id,
+            is_active=True,
+        )
+
+        serializer = BoxReviewCreateSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
+        order_boxes = OrderBox.objects.select_related("order")
+
+        if request.user.is_authenticated:
+            order_boxes = order_boxes.filter(
+                order__user=request.user,
+            )
+        else:
+            session_key = request.session.session_key
+
+            if not session_key:
+                raise NotFound(
+                    "Order box not found."
+                )
+
+            order_boxes = order_boxes.filter(
+                order__user__isnull=True,
+                order__session_key=session_key,
+            )
+
+        with transaction.atomic():
+            order_box = get_object_or_404(
+                order_boxes.select_for_update(
+                    of=("self",)
+                ),
+                pk=data["order_box_id"],
+                box_id=box.pk,
+            )
+
+            if order_box.order.status != "delivered":
+                raise ValidationError({
+                    "order_box_id": (
+                        "Only delivered orders "
+                        "can be reviewed."
+                    )
+                })
+
+            if Review.objects.filter(
+                order_box=order_box
+            ).exists():
+                return Response(
+                    {
+                        "detail": (
+                            "This box has "
+                            "already been reviewed."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            review = Review.objects.create(
+                order_box=order_box,
+                name=data["name"],
+                rating=data["rating"],
+                comment=data["comment"],
+            )
+
+        return Response(
+            ReviewListSerializer(review).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
 # -----------------ADMIN-----------------------
 
 class AdminProductCreateAPIView(ListCreateAPIView):
@@ -1067,6 +1207,7 @@ class AdminProductVariantCreateAPIView(CreateAPIView):
 
 
 
+
 class AdminProductImageCreateAPIView(CreateAPIView):
     queryset = ProductImage.objects.all()
 
@@ -1078,70 +1219,27 @@ class AdminProductImageCreateAPIView(CreateAPIView):
         FormParser,
     ]
 
-    @transaction.atomic
     def perform_create(self, serializer):
-        product = get_object_or_404(
-            Product.objects.select_for_update(),
-            pk=self.kwargs["product_id"],
+        create_image(
+            owner_model=Product,
+            owner_id=self.kwargs["product_id"],
+            image_model=ProductImage,
+            owner_field="product",
+            serializer=serializer,
         )
-
-        make_main = serializer.validated_data.get(
-            "is_main",
-            False,
-        )
-
-        has_images = ProductImage.objects.filter(
-            product=product
-        ).exists()
-
-        if not has_images:
-            make_main = True
-
-        if make_main:
-            ProductImage.objects.filter(
-                product=product,
-                is_main=True,
-            ).update(
-                is_main=False
-            )
-
-        serializer.save(
-            product=product,
-            is_main=make_main,
-        )
-
 
 
 class AdminProductImageSetMainAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def patch(self, request, product_id, image_id):
-        with transaction.atomic():
-            product = get_object_or_404(
-                Product.objects.select_for_update(),
-                pk=product_id,
-            )
-
-            image = get_object_or_404(
-                ProductImage,
-                pk=image_id,
-                product=product,
-            )
-
-            ProductImage.objects.filter(
-                product=product,
-                is_main=True,
-            ).exclude(
-                pk=image.pk,
-            ).update(
-                is_main=False,
-            )
-
-            if not image.is_main:
-                image.is_main = True
-                image.save(
-                    update_fields=["is_main"]
-                )
+        image = set_main_image(
+            owner_model=Product,
+            owner_id=product_id,
+            image_model=ProductImage,
+            owner_field="product",
+            image_id=image_id,
+        )
 
         serializer = AdminProductImageCreateSerializer(
             image,
@@ -1149,97 +1247,24 @@ class AdminProductImageSetMainAPIView(APIView):
         )
 
         return Response(serializer.data)
-    
+
 
 class AdminProductImageDeleteAPIView(APIView):
     permission_classes = [IsAdminUser]
 
     def delete(self, request, product_id, image_id):
-        with transaction.atomic():
-            product = get_object_or_404(
-                Product.objects.select_for_update(),
-                pk=product_id,
-            )
-
-            image = get_object_or_404(
-                ProductImage,
-                pk=image_id,
-                product=product,
-            )
-
-            remaining_images = (
-                ProductImage.objects.filter(
-                    product=product,
-                )
-                .exclude(pk=image.pk)
-            )
-
-            # Published products must retain an image.
-            if (
-                product.is_available
-                and not remaining_images.exists()
-            ):
-                raise ValidationError({
-                    "image": (
-                        "Cannot delete the last image "
-                        "of a published product."
-                    )
-                })
-
-            filename = image.image.name
-            storage = image.image.storage
-
-            # Delete the database record first.
-            image.delete()
-
-            remaining_images = ProductImage.objects.filter(
-                product=product
-            )
-
-            # Preserve an existing main image if possible.
-            main_image = (
-                remaining_images.filter(
-                    is_main=True,
-                )
-                .order_by("pk")
-                .first()
-            )
-
-            # Otherwise choose the first remaining image.
-            if main_image is None:
-                main_image = (
-                    remaining_images.order_by("pk").first()
-                )
-
-            if main_image is not None:
-                remaining_images.filter(
-                    is_main=True,
-                ).exclude(
-                    pk=main_image.pk,
-                ).update(
-                    is_main=False,
-                )
-
-                if not main_image.is_main:
-                    remaining_images.filter(
-                        pk=main_image.pk,
-                    ).update(
-                        is_main=True,
-                    )
-
-            # Delete the physical file after DB commit.
-            transaction.on_commit(
-                lambda filename=filename, storage=storage:
-                    delete_unused_product_image_file(
-                        filename=filename,
-                        storage=storage,
-                    )
-            )
+        delete_image(
+            owner_model=Product,
+            owner_id=product_id,
+            image_model=ProductImage,
+            owner_field="product",
+            image_id=image_id,
+            published_field="is_available",
+        )
 
         return Response(
             status=status.HTTP_204_NO_CONTENT
         )
-
 
 
 class AdminProductUpdateAPIView(RetrieveUpdateAPIView):
@@ -1589,7 +1614,9 @@ class AdminOrderStatusAPIView(APIView):
         new_status = serializer.validated_data["status"]
 
         allowed_transitions = {
-            "pending": "shipped",
+            "pending": "preparing",
+            "confirmed": "preparing",
+            "preparing": "shipped",
             "shipped": "delivered",
         }
 
@@ -1674,4 +1701,733 @@ class AdminOrderCancelAPIView(APIView):
                 order,
                 context={"request": request},
             ).data,
+        })
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCategoryListCreateAPIView(ListCreateAPIView):
+    serializer_class = AdminCategorySerializer
+    permission_classes = [IsAdminUser]
+    pagination_class = ProductPagination
+
+    def get_queryset(self):
+        query_serializer = AdminCategoryQuerySerializer(
+            data=self.request.query_params.dict()
+        )
+
+        query_serializer.is_valid(
+            raise_exception=True
+        )
+
+        filters = query_serializer.validated_data
+
+        queryset = Category.objects.select_related(
+            "parent"
+        )
+
+        if "is_active" in filters:
+            queryset = queryset.filter(
+                is_active=filters["is_active"]
+            )
+
+        if "parent" in filters:
+            queryset = queryset.filter(
+                parent_id=filters["parent"]
+            )
+
+        search = filters.get("search", "")
+
+        if search:
+            queryset = queryset.filter(
+                Q(name_ar__icontains=search)
+                | Q(name_en__icontains=search)
+                | Q(slug__icontains=search)
+            )
+
+        return queryset.order_by("name_en", "pk")
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCategoryDetailAPIView(RetrieveUpdateAPIView):
+    queryset = Category.objects.select_related("parent")
+
+    serializer_class = AdminCategorySerializer
+    permission_classes = [IsAdminUser]
+
+    lookup_field = "pk"
+    lookup_url_kwarg = "category_id"
+
+    http_method_names = [
+        "get",
+        "patch",
+        "head",
+        "options",
+    ]
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxListCreateAPIView(ListCreateAPIView):
+    permission_classes = [IsAdminUser]
+    pagination_class = ProductPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AdminBoxWriteSerializer
+
+        return AdminBoxListSerializer
+
+    def get_queryset(self):
+        queryset = (
+            Box.objects
+            .annotate(
+                items_count=Count(
+                    "items",
+                    distinct=True,
+                )
+            )
+        )
+
+        if self.request.method != "GET":
+            return queryset
+
+        query_serializer = AdminBoxQuerySerializer(
+            data=self.request.query_params.dict()
+        )
+        query_serializer.is_valid(
+            raise_exception=True
+        )
+
+        filters = query_serializer.validated_data
+
+        if "is_active" in filters:
+            queryset = queryset.filter(
+                is_active=filters["is_active"]
+            )
+
+        search = filters.get("search", "")
+
+        if search:
+            queryset = queryset.filter(
+                Q(name_ar__icontains=search)
+                | Q(name_en__icontains=search)
+                | Q(sku__icontains=search)
+            )
+
+        return queryset.order_by(
+            "-created_at",
+            "-pk",
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(
+            is_active=False
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxDetailAPIView(RetrieveUpdateAPIView):
+    permission_classes = [IsAdminUser]
+
+    lookup_field = "pk"
+    lookup_url_kwarg = "box_id"
+
+    http_method_names = [
+        "get",
+        "patch",
+        "head",
+        "options",
+    ]
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return AdminBoxWriteSerializer
+
+        return AdminBoxDetailSerializer
+
+    def get_queryset(self):
+        return (
+            Box.objects
+            .annotate(
+                items_count=Count(
+                    "items",
+                    distinct=True,
+                )
+            )
+            .prefetch_related(
+                Prefetch(
+                    "items",
+                    queryset=(
+                        BoxItem.objects
+                        .select_related("variant__product")
+                        .order_by("pk")
+                    ),
+                ),
+                Prefetch(
+                    "images",
+                    queryset=BoxImage.objects.order_by(
+                        "-is_main",
+                        "pk",
+                    ),
+                ),
+            )
+        )
+
+
+
+def get_locked_draft_box(box_id):
+    box = get_object_or_404(
+        Box.objects.select_for_update(),
+        pk=box_id,
+    )
+
+    if box.is_active:
+        raise ValidationError({
+            "box": (
+                "Unpublish the box before "
+                "changing its items."
+            )
+        })
+
+    return box
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxItemCreateAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, box_id):
+        serializer = AdminBoxItemCreateSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        variant = serializer.validated_data["variant"]
+        quantity = serializer.validated_data["quantity"]
+
+        with transaction.atomic():
+            box = get_locked_draft_box(box_id)
+
+            if BoxItem.objects.filter(
+                box=box,
+                variant=variant,
+            ).exists():
+                return Response(
+                    {
+                        "detail": (
+                            "This variant already exists "
+                            "in the box."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            box_item = BoxItem.objects.create(
+                box=box,
+                variant=variant,
+                quantity=quantity,
+            )
+
+        box_item = (
+            BoxItem.objects
+            .select_related("variant__product")
+            .get(pk=box_item.pk)
+        )
+
+        return Response(
+            BoxItemSerializer(box_item).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxItemDetailAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, box_id, item_id):
+        serializer = AdminBoxItemUpdateSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        quantity = serializer.validated_data["quantity"]
+
+        with transaction.atomic():
+            box = get_locked_draft_box(box_id)
+
+            box_item = get_object_or_404(
+                BoxItem.objects.select_for_update(),
+                pk=item_id,
+                box=box,
+            )
+
+            box_item.quantity = quantity
+            box_item.save(update_fields=["quantity"])
+
+        box_item = (
+            BoxItem.objects
+            .select_related("variant__product")
+            .get(pk=box_item.pk)
+        )
+
+        return Response(
+            BoxItemSerializer(box_item).data
+        )
+
+    def delete(self, request, box_id, item_id):
+        with transaction.atomic():
+            box = get_locked_draft_box(box_id)
+
+            box_item = get_object_or_404(
+                BoxItem.objects.select_for_update(),
+                pk=item_id,
+                box=box,
+            )
+
+            box_item.delete()
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxImageCreateAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    parser_classes = [
+        MultiPartParser,
+        FormParser,
+    ]
+
+    def post(self, request, box_id):
+        serializer = AdminBoxImageCreateSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        image = create_image(
+            owner_model=Box,
+            owner_id=box_id,
+            image_model=BoxImage,
+            owner_field="box",
+            serializer=serializer,
+        )
+
+        return Response(
+            BoxImageSerializer(
+                image,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxImageSetMainAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request, box_id, image_id):
+        image = set_main_image(
+            owner_model=Box,
+            owner_id=box_id,
+            image_model=BoxImage,
+            owner_field="box",
+            image_id=image_id,
+        )
+
+        return Response(
+            BoxImageSerializer(
+                image,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxImageDeleteAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, box_id, image_id):
+        delete_image(
+            owner_model=Box,
+            owner_id=box_id,
+            image_model=BoxImage,
+            owner_field="box",
+            image_id=image_id,
+            published_field="is_active",
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+    
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxPublishAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, box_id):
+        with transaction.atomic():
+            box = get_object_or_404(
+                Box.objects.select_for_update(),
+                pk=box_id,
+            )
+
+            if not box.is_active:
+                errors = {}
+
+                if (
+                    not box.name_ar.strip()
+                    or not box.description_ar.strip()
+                ):
+                    errors["box"] = (
+                        "Arabic name and description "
+                        "are required."
+                    )
+
+                if box.price <= 0:
+                    errors["price"] = (
+                        "Price must be greater than zero."
+                    )
+
+                if box.stock <= 0:
+                    errors["stock"] = (
+                        "Box must have available stock."
+                    )
+
+                has_main_image = (
+                    BoxImage.objects.filter(
+                        box=box,
+                        is_main=True,
+                    )
+                    .exclude(image="")
+                    .exists()
+                )
+
+                if not has_main_image:
+                    errors["images"] = (
+                        "Box must have a main image."
+                    )
+
+                items = list(
+                    BoxItem.objects
+                    .select_related("variant__product")
+                    .filter(box=box)
+                    .order_by("pk")
+                )
+
+                if not items:
+                    errors["items"] = (
+                        "Box must contain at least "
+                        "one variant."
+                    )
+
+                invalid_items = []
+
+                for item in items:
+                    variant = item.variant
+
+                    if (
+                        not variant.is_active
+                        or not variant.product.is_available
+                        or variant.stock < item.quantity
+                    ):
+                        invalid_items.append(item.pk)
+
+                if invalid_items:
+                    errors["invalid_items"] = (
+                        "These box item IDs have "
+                        "inactive or insufficient-stock "
+                        f"variants: {invalid_items}"
+                    )
+
+                if errors:
+                    raise ValidationError(errors)
+
+                box.is_active = True
+                box.save(
+                    update_fields=[
+                        "is_active",
+                        "updated_at",
+                    ]
+                )
+
+        return Response({
+            "id": box.pk,
+            "is_active": box.is_active,
+            "detail": "Box published successfully.",
+        })
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminBoxUnpublishAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, box_id):
+        with transaction.atomic():
+            box = get_object_or_404(
+                Box.objects.select_for_update(),
+                pk=box_id,
+            )
+
+            if box.is_active:
+                box.is_active = False
+                box.save(
+                    update_fields=[
+                        "is_active",
+                        "updated_at",
+                    ]
+                )
+
+        return Response({
+            "id": box.pk,
+            "is_active": box.is_active,
+            "detail": "Box unpublished successfully.",
+        })
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCollectionListCreateAPIView(ListCreateAPIView):
+    permission_classes = [IsAdminUser]
+    pagination_class = ProductPagination
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AdminCollectionWriteSerializer
+
+        return AdminCollectionListSerializer
+
+    def get_queryset(self):
+        query_serializer = AdminCollectionQuerySerializer(
+            data=self.request.query_params.dict()
+        )
+        query_serializer.is_valid(
+            raise_exception=True
+        )
+
+        filters = query_serializer.validated_data
+
+        queryset = Collection.objects.annotate(
+            boxes_count=Count(
+                "boxes",
+                distinct=True,
+            )
+        )
+
+        if "is_active" in filters:
+            queryset = queryset.filter(
+                is_active=filters["is_active"]
+            )
+
+        search = filters.get("search", "")
+
+        if search:
+            queryset = queryset.filter(
+                Q(name_ar__icontains=search)
+                | Q(name_en__icontains=search)
+                | Q(slug__icontains=search)
+            )
+
+        return queryset.order_by("name_en", "pk")
+
+    def perform_create(self, serializer):
+        serializer.save(is_active=False)
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCollectionDetailAPIView(RetrieveUpdateAPIView):
+    permission_classes = [IsAdminUser]
+
+    lookup_field = "pk"
+    lookup_url_kwarg = "collection_id"
+
+    http_method_names = [
+        "get",
+        "patch",
+        "head",
+        "options",
+    ]
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return AdminCollectionWriteSerializer
+
+        return AdminCollectionDetailSerializer
+
+    def get_queryset(self):
+        return (
+            Collection.objects
+            .annotate(
+                boxes_count=Count(
+                    "boxes",
+                    distinct=True,
+                )
+            )
+            .prefetch_related(
+                Prefetch(
+                    "boxes",
+                    queryset=Box.objects.order_by(
+                        "name_en",
+                        "pk",
+                    ),
+                )
+            )
+        )
+
+
+
+def get_locked_draft_collection(collection_id):
+    collection = get_object_or_404(
+        Collection.objects.select_for_update(),
+        pk=collection_id,
+    )
+
+    if collection.is_active:
+        raise ValidationError({
+            "detail": (
+                "Unpublish the collection before "
+                "modifying its boxes."
+            )
+        })
+
+    return collection
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCollectionBoxAddAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, collection_id):
+        serializer = AdminCollectionBoxAddSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        box = serializer.validated_data["box"]
+
+        with transaction.atomic():
+            collection = get_locked_draft_collection(
+                collection_id
+            )
+
+            if collection.boxes.filter(
+                pk=box.pk
+            ).exists():
+                return Response(
+                    {
+                        "detail": (
+                            "This box already belongs "
+                            "to the collection."
+                        )
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            collection.boxes.add(box)
+
+        return Response(
+            {
+                "collection_id": collection.pk,
+                "box_id": box.pk,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCollectionBoxRemoveAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, collection_id, box_id):
+        with transaction.atomic():
+            collection = get_locked_draft_collection(
+                collection_id
+            )
+
+            if not collection.boxes.filter(
+                pk=box_id
+            ).exists():
+                raise NotFound(
+                    "Box is not in this collection."
+                )
+
+            collection.boxes.remove(box_id)
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCollectionPublishAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, collection_id):
+        with transaction.atomic():
+            collection = get_object_or_404(
+                Collection.objects.select_for_update(),
+                pk=collection_id,
+            )
+
+            if collection.is_active:
+                changed = False
+            else:
+                if not collection.boxes.filter(
+                    is_active=True
+                ).exists():
+                    raise ValidationError({
+                        "boxes": (
+                            "The collection must contain "
+                            "at least one published box."
+                        )
+                    })
+
+                collection.is_active = True
+                collection.save(
+                    update_fields=["is_active"]
+                )
+                changed = True
+
+        return Response({
+            "id": collection.pk,
+            "is_active": collection.is_active,
+            "changed": changed,
+        })
+
+
+@method_decorator(csrf_protect, name="dispatch")
+class AdminCollectionUnpublishAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, collection_id):
+        with transaction.atomic():
+            collection = get_object_or_404(
+                Collection.objects.select_for_update(),
+                pk=collection_id,
+            )
+
+            changed = collection.is_active
+
+            if changed:
+                collection.is_active = False
+                collection.save(
+                    update_fields=["is_active"]
+                )
+
+        return Response({
+            "id": collection.pk,
+            "is_active": collection.is_active,
+            "changed": changed,
         })

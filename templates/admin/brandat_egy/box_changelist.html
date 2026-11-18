@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_ui %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="shop-panel" data-testid="boxes-page">
+    <div class="shop-card-head">
+        <div>
+            <h1>{% trans "Boxes" %}</h1>
+            <p class="shop-muted">{% trans "Bundles ready for the store." %}</p>
+        </div>
+        {% if has_add_permission %}
+        <a class="shop-add" data-testid="box-add" href="{% url 'admin:brandat_egy_box_add' %}">+ {% trans "Add box" %}</a>
+        {% endif %}
+    </div>
+    <div class="shop-toolbar">
+        <form method="get">
+            <span class="material-symbols-outlined">search</span>
+            <input type="search" name="q" value="{{ cl.query }}" placeholder="{% trans 'Search boxes...' %}" data-testid="box-search">
+        </form>
+    </div>
+    <table class="shop-table">
+        <thead>
+            <tr>
+                <th>{% trans "Box" %}</th>
+                <th>{% trans "Price" %}</th>
+                <th>{% trans "Stock" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for box in cl.result_list %}
+            <tr>
+                <td>
+                    <a class="shop-person" href="{% url 'admin:brandat_egy_box_change' box.pk %}">
+                        {% for image in box.images.all %}
+                            {% if forloop.first and image.image %}
+                            <img src="{{ image.image.url }}" alt="">
+                            {% elif forloop.first %}
+                            <span class="shop-thumb">{{ box.name_ar|slice:":1" }}</span>
+                            {% endif %}
+                        {% empty %}
+                        <span class="shop-thumb">{{ box.name_ar|slice:":1" }}</span>
+                        {% endfor %}
+                        <span>{{ box.name_ar }}</span>
+                    </a>
+                </td>
+                <td>{{ box.final_price|floatformat:0 }} {% trans "EGP" %}</td>
+                <td>{{ box.stock }}</td>
+                <td>
+                    {% if not box.is_active or box.stock == 0 %}
+                    <span class="shop-badge shop-badge--red">{% trans "Out of stock" %}</span>
+                    {% elif box.stock <= 5 %}
+                    <span class="shop-badge shop-badge--amber">{% trans "Running low" %}</span>
+                    {% else %}
+                    <span class="shop-badge shop-badge--green">{% trans "In stock" %}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a class="shop-icon-link" href="{% url 'admin:brandat_egy_box_change' box.pk %}" aria-label="{% trans 'Edit box' %}">
+                        <span class="material-symbols-outlined">edit</span>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="shop-muted">{% trans "No boxes yet." %}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="shop-pager">
+        <span>{% blocktranslate with shown=cl.result_list|length total=cl.result_count %}Showing {{ shown }} of {{ total }}{% endblocktranslate %}</span>
+        <span>
+            {% if cl.page_num != 1 %}{% with prev_page=cl.page_num|add:"-1" %}<a href="{% page_query request prev_page %}">{% trans "Previous" %}</a>{% endwith %}{% endif %}
+            {% if cl.page_num != cl.paginator.num_pages %}{% with next_page=cl.page_num|add:"1" %}<a href="{% page_query request next_page %}">{% trans "Next" %}</a>{% endwith %}{% endif %}
+        </span>
+    </div>
+</section>
+{% endblock %}

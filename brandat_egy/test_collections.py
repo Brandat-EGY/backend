@@ -73,58 +73,55 @@ class CollectionListTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 0)
 
+    def test_collection_detail_returns_active_boxes(self):
+        url = reverse(
+            "collection-detail",
+            kwargs={"slug": self.collection.slug},
+        )
 
-def test_collection_detail_returns_active_boxes(self):
-    url = reverse(
-        "collection-detail",
-        kwargs={"slug": self.collection.slug},
-    )
+        response = self.client.get(url)
 
-    response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data["slug"],
+            "korean-skincare",
+        )
+        self.assertEqual(
+            response.data["boxes_count"],
+            1,
+        )
 
-    self.assertEqual(response.status_code, 200)
-    self.assertEqual(
-        response.data["slug"],
-        "korean-skincare",
-    )
-    self.assertEqual(
-        response.data["boxes_count"],
-        1,
-    )
+        boxes = response.data["boxes"]
 
-    boxes = response.data["boxes"]
+        self.assertEqual(len(boxes), 1)
+        self.assertEqual(
+            boxes[0]["id"],
+            self.active_box.pk,
+        )
 
-    self.assertEqual(len(boxes), 1)
-    self.assertEqual(
-        boxes[0]["id"],
-        self.active_box.pk,
-    )
+        self.assertIn("final_price", boxes[0])
+        self.assertIn("available_stock", boxes[0])
+        self.assertIn("in_stock", boxes[0])
 
-    self.assertIn("final_price", boxes[0])
-    self.assertIn("available_stock", boxes[0])
-    self.assertIn("in_stock", boxes[0])
+    def test_inactive_collection_detail_returns_404(self):
+        self.collection.is_active = False
+        self.collection.save(update_fields=["is_active"])
 
+        url = reverse(
+            "collection-detail",
+            kwargs={"slug": self.collection.slug},
+        )
 
-def test_inactive_collection_detail_returns_404(self):
-    self.collection.is_active = False
-    self.collection.save(update_fields=["is_active"])
+        response = self.client.get(url)
 
-    url = reverse(
-        "collection-detail",
-        kwargs={"slug": self.collection.slug},
-    )
+        self.assertEqual(response.status_code, 404)
 
-    response = self.client.get(url)
+    def test_nonexistent_collection_returns_404(self):
+        url = reverse(
+            "collection-detail",
+            kwargs={"slug": "not-found"},
+        )
 
-    self.assertEqual(response.status_code, 404)
+        response = self.client.get(url)
 
-
-def test_nonexistent_collection_returns_404(self):
-    url = reverse(
-        "collection-detail",
-        kwargs={"slug": "not-found"},
-    )
-
-    response = self.client.get(url)
-
-    self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 404)

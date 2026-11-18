@@ -1,0 +1,19 @@
+{% load i18n %}
+<section class="brandat-list-stats" data-testid="box-stats">
+    <div>
+        <span>{% trans "Visible boxes" %}</span>
+        <strong>{{ box_stats.active }}</strong>
+    </div>
+    <div>
+        <span>{% trans "All boxes" %}</span>
+        <strong>{{ box_stats.total }}</strong>
+    </div>
+    <div>
+        <span>{% trans "Running low" %}</span>
+        <strong>{{ box_stats.low }}</strong>
+    </div>
+    <div>
+        <span>{% trans "Boxes sold" %}</span>
+        <strong>{{ box_stats.sold }}</strong>
+    </div>
+</section>

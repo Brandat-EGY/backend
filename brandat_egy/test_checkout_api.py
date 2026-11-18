@@ -14,6 +14,7 @@ from .models import (
     OrderBox,
     Product,
     ProductVariant,
+    ShippingRate,
 )
 
 
@@ -22,11 +23,15 @@ class CheckoutAPITests(APITestCase):
     def setUp(self):
         self.url = reverse("checkout")
 
+        self.governorate = ShippingRate.objects.get(name_ar="القاهرة")
+        self.governorate.fee = Decimal("50.00")
+        self.governorate.save(update_fields=["fee", "is_active"])
         self.customer_data = {
             "customer_name": "Mohamed Reda",
             "phone": "01012345678",
             "email": "customer@example.com",
             "address": "Cairo, Nasr City",
+            "governorate_id": self.governorate.pk,
         }
 
         self.product = Product.objects.create(
@@ -85,11 +90,12 @@ class CheckoutAPITests(APITestCase):
         )
 
         self.assertIsNone(order.user)
-        self.assertEqual(order.status, "pending")
+        self.assertEqual(order.status, "confirmed")
         self.assertEqual(
             order.total_price,
-            Decimal("700.00"),
+            Decimal("750.00"),
         )
+        self.assertEqual(order.shipping_fee, Decimal("50.00"))
 
         self.assertEqual(
             OrderItem.objects.filter(order=order).count(),
@@ -213,5 +219,5 @@ class CheckoutAPITests(APITestCase):
         )
         self.assertEqual(
             response.data["total_price"],
-            "300.00",
+            "350.00",
         )

@@ -1,0 +1,77 @@
+{% load i18n %}
+
+<div id="{{ inline_admin_formset.formset.prefix }}-group" class="shop-variant-block" data-inline-type="tabular" {% if inline_admin_formset.opts.tab %}x-show="activeTab == '{{ inline_admin_formset.formset.prefix|slugify }}'"{% else %}x-show="activeTab == 'general'"{% endif %}>
+    {% include "unfold/helpers/inline_heading.html" %}
+
+    <div class="formset-wrapper shop-variant-set">
+        {{ inline_admin_formset.formset.management_form }}
+        {% include "unfold/helpers/edit_inline/inline_errors.html" %}
+
+        <div class="formset shop-variant-list" data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
+            <p class="shop-variant-empty" data-testid="variant-empty">{% trans "Add an option so this product can be sold." %}</p>
+
+            {% for inline_admin_form in inline_admin_formset %}
+                <article class="form-group shop-variant-card{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}" data-testid="variant-card">
+                    <div class="form-row">
+                        {% for hidden in inline_admin_form.form.hidden_fields %}
+                            <input type="hidden" name="{{ hidden.html_name }}" value="{{ hidden.value|default_if_none:'' }}" form="{{ opts.model_name }}_form"{% if hidden.auto_id %} id="{{ hidden.auto_id }}"{% endif %}>
+                        {% endfor %}
+
+                        <div class="shop-variant-head">
+                            <div>
+                                <strong>
+                                    {% if inline_admin_form.form.shade_ar.value %}
+                                        {{ inline_admin_form.form.shade_ar.value }}
+                                    {% elif inline_admin_form.original %}
+                                        {{ inline_admin_form.original.product.name_ar }}
+                                    {% else %}
+                                        {% trans "New option" %}
+                                    {% endif %}
+                                </strong>
+                                {% if inline_admin_form.form.size.value %}
+                                    <small>{{ inline_admin_form.form.size.value }}</small>
+                                {% endif %}
+                            </div>
+                            {% include "unfold/helpers/edit_inline/inline_delete.html" %}
+                        </div>
+
+                        <p class="shop-variant-removed">{% trans "This option will be removed when you save." %}</p>
+
+                        {% if inline_admin_form.form.non_field_errors %}
+                            <div class="shop-variant-errors">
+                                {{ inline_admin_form.form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="shop-variant-grid">
+                            {% for fieldset in inline_admin_form %}
+                                {% for line in fieldset %}
+                                    {% for field in line %}
+                                        {% if field.is_readonly or not field.field.is_hidden %}
+                                            <label class="shop-variant-field field-{{ field.field.name }}{% if field.field.errors %} has-error{% endif %}">
+                                                <span>
+                                                    {{ field.field.label }}
+                                                    {% if field.field.field.required %}<i>*</i>{% endif %}
+                                                </span>
+                                                {{ field.field }}
+                                                {% for error in field.field.errors %}
+                                                    <em>{{ error }}</em>
+                                                {% endfor %}
+                                            </label>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+
+            {% if inline_admin_formset.has_add_permission %}
+                <div class="form-actions">
+                    <button type="button" class="add-row shop-add" data-testid="add-variant">{% trans "Add an option" %}</button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

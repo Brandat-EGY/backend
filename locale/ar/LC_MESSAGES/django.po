@@ -1,0 +1,1042 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ar\n"
+
+msgid "Store Management"
+msgstr "إدارة المتجر"
+
+msgid "Filters"
+msgstr "فلتره"
+
+msgid "Accounts"
+msgstr "حسابات المستخدمين"
+
+msgid "User"
+msgstr "مستخدم"
+
+msgid "Users"
+msgstr "المستخدمون"
+
+msgid "Token Blacklist"
+msgstr "إدارة الرموز المحظورة"
+
+msgid "Outstanding Token"
+msgstr "رمز دخول نشط"
+
+msgid "Outstanding Tokens"
+msgstr "رموز الدخول النشطة"
+
+msgid "Blacklisted Token"
+msgstr "رمز دخول محظور"
+
+msgid "Blacklisted Tokens"
+msgstr "رموز الدخول المحظورة"
+
+msgid "Category"
+msgstr "التصنيف"
+
+msgid "Categories"
+msgstr "التصنيفات"
+
+msgid "Category Arabic name"
+msgstr "اسم التصنيف بالعربي"
+
+msgid "Category English name"
+msgstr "اسم التصنيف بالإنجليزي"
+
+msgid "slug"
+msgstr "slug"
+
+msgid "Parent category"
+msgstr "التصنيف الأب"
+
+msgid "Category is shown"
+msgstr "ظاهر للعملاء"
+
+msgid "Brand"
+msgstr "الماركة"
+
+msgid "Brands"
+msgstr "الماركات"
+
+msgid "Brand Arabic name"
+msgstr "اسم الماركة بالعربي"
+
+msgid "Brand English name"
+msgstr "اسم الماركة بالإنجليزي"
+
+msgid "Brand is shown"
+msgstr "ظاهرة للعملاء"
+
+msgid "Product"
+msgstr "المنتج"
+
+msgid "Products"
+msgstr "المنتجات"
+
+msgid "Product Arabic name"
+msgstr "اسم المنتج بالعربي"
+
+msgid "Product English name"
+msgstr "اسم المنتج بالإنجليزي"
+
+msgid "Product Arabic description"
+msgstr "وصف المنتج بالعربي"
+
+msgid "Product English description"
+msgstr "وصف المنتج بالإنجليزي"
+
+msgid "Barcode"
+msgstr "الباركود"
+
+msgid "Available for sale"
+msgstr "متاح للبيع"
+
+msgid "Created at"
+msgstr "تاريخ الإضافة"
+
+msgid "Updated at"
+msgstr "آخر تعديل"
+
+msgid "Product Variant"
+msgstr "خيار المنتج"
+
+msgid "Product Variants"
+msgstr "خيارات المنتج"
+
+msgid "Size"
+msgstr "الحجم"
+
+msgid "Shade Arabic name"
+msgstr "اسم الدرجة بالعربي"
+
+msgid "Shade English name"
+msgstr "اسم الدرجة بالإنجليزي"
+
+msgid "Variant price"
+msgstr "السعر"
+
+msgid "Discount price"
+msgstr "سعر الخصم"
+
+msgid "Variant code"
+msgstr "كود الصنف"
+
+msgid "Variant stock"
+msgstr "الكمية في المخزون"
+
+msgid "Variant is active"
+msgstr "مفعّل"
+
+msgid "Discount price must be lower than the price."
+msgstr "يجب أن يكون سعر الخصم أقل من السعر."
+
+msgid "Box"
+msgstr "البوكس"
+
+msgid "Boxes"
+msgstr "البوكسات"
+
+msgid "Box Arabic name"
+msgstr "اسم البوكس بالعربي"
+
+msgid "Box English name"
+msgstr "اسم البوكس بالإنجليزي"
+
+msgid "Box Arabic description"
+msgstr "وصف البوكس بالعربي"
+
+msgid "Box English description"
+msgstr "وصف البوكس بالإنجليزي"
+
+msgid "Box code"
+msgstr "كود البوكس"
+
+msgid "Box price"
+msgstr "السعر"
+
+msgid "Box stock"
+msgstr "عدد البوكسات"
+
+msgid "Box is shown"
+msgstr "ظاهر للبيع"
+
+msgid "Box Item"
+msgstr "محتوى البوكس"
+
+msgid "Box Items"
+msgstr "محتويات البوكس"
+
+msgid "Included product"
+msgstr "المنتج"
+
+msgid "Quantity"
+msgstr "العدد"
+
+msgid "Box Image"
+msgstr "صورة البوكس"
+
+msgid "Box Images"
+msgstr "صور البوكس"
+
+msgid "Image"
+msgstr "الصورة"
+
+msgid "Main image"
+msgstr "الصورة الرئيسية"
+
+msgid "Image uploaded at"
+msgstr "تاريخ الرفع"
+
+msgid "Collection"
+msgstr "المجموعة"
+
+msgid "Collections"
+msgstr "المجموعات"
+
+msgid "Collection Arabic name"
+msgstr "اسم المجموعة بالعربي"
+
+msgid "Collection English name"
+msgstr "اسم المجموعة بالإنجليزي"
+
+msgid "Collection Arabic description"
+msgstr "وصف المجموعة بالعربي"
+
+msgid "Collection English description"
+msgstr "وصف المجموعة بالإنجليزي"
+
+msgid "Collection is shown"
+msgstr "ظاهرة للعملاء"
+
+msgid "Product Image"
+msgstr "صورة المنتج"
+
+msgid "Product Images"
+msgstr "صور المنتج"
+
+msgid "Order"
+msgstr "الطلب"
+
+msgid "Orders"
+msgstr "الطلبات"
+
+msgid "Pending"
+msgstr "بانتظار الدفع"
+
+msgid "Confirmed"
+msgstr "تم تأكيد الطلب"
+
+msgid "Preparing"
+msgstr "جاري التجهيز"
+
+msgid "Start preparing"
+msgstr "ابدأ التجهيز"
+
+msgid "Start preparing this order?"
+msgstr "تبدأ تجهيز هذا الطلب؟"
+
+msgid "The order is being prepared."
+msgstr "الطلب جاري تجهيزه."
+
+msgid "This product already has a main photo. Turn that one off before choosing another."
+msgstr "المنتج له صورة رئيسية بالفعل. أغلقها أولًا، ثم علّم الصورة الجديدة."
+
+msgid "This box already has a main photo. Turn that one off before choosing another."
+msgstr "البوكس له صورة رئيسية بالفعل. أغلقها أولًا، ثم علّم الصورة الجديدة."
+
+msgid "Write an English link for this collection so its page can open."
+msgstr "اكتب رابط المجموعة بالإنجليزي حتى تفتح صفحتها."
+
+msgid "A shown collection needs at least one box that is for sale."
+msgstr "المجموعة الظاهرة لازم يكون فيها بوكس واحد على الأقل متاح للبيع."
+
+msgid "Boxes on the store"
+msgstr "البوكسات الظاهرة في المتجر"
+
+msgid "Paid"
+msgstr "تم الدفع"
+
+msgid "Shipped"
+msgstr "تم الشحن"
+
+msgid "Delivered"
+msgstr "تم التسليم"
+
+msgid "Cancelled"
+msgstr "ملغى"
+
+msgid "Customer"
+msgstr "العميل"
+
+msgid "This account was created by a customer. Permissions stay hidden so staff cannot grant access by mistake."
+msgstr "هذا الحساب لعميل سجّل من الموقع. الصلاحيات مخفية حتى لا تُمنح صلاحية بالخطأ."
+
+msgid "Guest session"
+msgstr "جلسة الزائر"
+
+msgid "Customer name"
+msgstr "اسم المستلم"
+
+msgid "Phone"
+msgstr "الهاتف"
+
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+msgid "Address"
+msgstr "عنوان التوصيل"
+
+msgid "Order status"
+msgstr "حالة الطلب"
+
+msgid "Stock restored at"
+msgstr "وقت رجوع المخزون"
+
+msgid "Order created at"
+msgstr "وقت إنشاء الطلب"
+
+msgid "Order updated at"
+msgstr "آخر تحديث"
+
+msgid "Order Item"
+msgstr "صنف الطلب"
+
+msgid "Order Items"
+msgstr "أصناف الطلب"
+
+msgid "Ordered variant"
+msgstr "الخيار"
+
+msgid "Unit price"
+msgstr "سعر القطعة"
+
+msgid "Order Box"
+msgstr "بوكس الطلب"
+
+msgid "Order Boxes"
+msgstr "بوكسات الطلب"
+
+msgid "Order box price"
+msgstr "سعر البوكس"
+
+msgid "Order Box Item"
+msgstr "قطعة البوكس"
+
+msgid "Order Box Items"
+msgstr "قطع البوكس"
+
+msgid "Packed product"
+msgstr "المنتج"
+
+msgid "Item code"
+msgstr "كود المنتج"
+
+msgid "Daily Offer"
+msgstr "عرض اليوم"
+
+msgid "Daily Offers"
+msgstr "عروض اليوم"
+
+msgid "Offer variant"
+msgstr "خيار المنتج"
+
+msgid "Offer price"
+msgstr "سعر العرض"
+
+msgid "Offer starts at"
+msgstr "بداية العرض"
+
+msgid "Offer ends at"
+msgstr "نهاية العرض"
+
+msgid "Offer is active"
+msgstr "العرض نشط"
+
+msgid "Choose either a variant or a box."
+msgstr "يُرجى اختيار خيار منتج أو بوكس."
+
+msgid "Leave one empty. The offer can be on a product option or a box, not both."
+msgstr "سيب واحدة فاضية. العرض يكون على خيار منتج أو بوكس، مش الاتنين."
+
+msgid "End time must be after start time."
+msgstr "يجب أن يكون وقت النهاية بعد البداية."
+
+msgid "Offer price must be lower than the regular price."
+msgstr "يجب أن يكون سعر العرض أقل من السعر الأصلي."
+
+msgid "An active offer already overlaps this period for the same item."
+msgstr "يوجد عرض نشط بالفعل على نفس المنتج خلال هذه الفترة."
+
+msgid "Review"
+msgstr "التقييم"
+
+msgid "Reviews"
+msgstr "التقييمات"
+
+msgid "Reviewed item"
+msgstr "المنتج المُقيَّم"
+
+msgid "Reviewer name"
+msgstr "اسم المُقيِّم"
+
+msgid "Rating"
+msgstr "التقييم"
+
+msgid "Comment"
+msgstr "التعليق"
+
+msgid "Review created at"
+msgstr "وقت التقييم"
+
+msgid "Favorite"
+msgstr "المفضلة"
+
+msgid "Favorites"
+msgstr "المفضلات"
+
+msgid "Favorite created at"
+msgstr "وقت الإضافة"
+
+msgid "Cancel selected pending orders"
+msgstr "إلغاء الطلبات بانتظار الدفع"
+
+msgid "Order #%(number)s: %(error)s"
+msgstr "الطلب #%(number)s: %(error)s"
+
+msgid "%(count)s orders cancelled and stock restored."
+msgstr "تم إلغاء %(count)s طلب، وعاد المخزون."
+
+msgid "Only pending orders can be cancelled"
+msgstr "الإلغاء متاح للطلبات بانتظار الدفع فقط."
+
+msgid "This order can no longer be cancelled"
+msgstr "لا يمكن إلغاء الطلب بعد التسليم."
+
+msgid "An ordered box no longer exists"
+msgstr "أحد البوكسات في الطلب لم يعد موجودًا."
+
+msgid "An ordered variant no longer exists"
+msgstr "أحد منتجات الطلب لم يعد موجودًا."
+
+msgid "Order total"
+msgstr "إجمالي الطلب"
+
+msgid "Line total"
+msgstr "الإجمالي"
+
+msgid "Account name"
+msgstr "اسم العميل"
+
+msgid "Customer address"
+msgstr "العنوان"
+
+msgid "Permissions"
+msgstr "الصلاحيات"
+
+msgid "Dates"
+msgstr "التواريخ"
+
+msgid "Joined on"
+msgstr "تاريخ التسجيل"
+
+msgid "Last sign in"
+msgstr "آخر دخول"
+
+msgid "Has not signed in yet"
+msgstr "لم يتم تسجيل الدخول بعد"
+
+msgid "Dashboard"
+msgstr "الرئيسية"
+
+msgid "Authentication and Authorization"
+msgstr "صلاحيات الموظفين"
+
+msgid "Delivered sales"
+msgstr "مبيعات الطلبات المتسلّمة"
+
+msgid "EGP"
+msgstr "ج.م"
+
+msgid "New orders"
+msgstr "طلبات تحتاج إلى متابعة"
+
+msgid "Total products"
+msgstr "إجمالي المنتجات"
+
+msgid "Low-stock variants"
+msgstr "منتجات أوشكت على النفاد"
+
+msgid "Recent Orders"
+msgstr "آخر الطلبات"
+
+msgid "Latest customer orders"
+msgstr "أحدث طلبات العملاء"
+
+msgid "View All"
+msgstr "عرض الكل"
+
+msgid "Total"
+msgstr "الإجمالي"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Date"
+msgstr "التاريخ"
+
+msgid "No orders yet."
+msgstr "لا توجد طلبات بعد."
+
+msgid "Groups"
+msgstr "مجموعات الصلاحيات"
+
+msgid "Sales Analytics"
+msgstr "المبيعات"
+
+msgid "Last 30 days"
+msgstr "آخر 30 يوم"
+
+msgid "Sales (EGP)"
+msgstr "المبيعات (ج.م)"
+
+msgid "Sales of delivered orders"
+msgstr "مبيعات الطلبات المتسلّمة"
+
+msgid "Sales period"
+msgstr "فترة المبيعات"
+
+msgid "7 days"
+msgstr "7 أيام"
+
+msgid "30 days"
+msgstr "30 يوم"
+
+msgid "90 days"
+msgstr "90 يوم"
+
+msgid "Order Status Distribution"
+msgstr "حالة الطلبات"
+
+msgid "All orders"
+msgstr "كل الطلبات"
+
+msgid "Number of orders"
+msgstr "عدد الطلبات"
+
+msgid "Store home"
+msgstr "لوحة المتجر"
+
+msgid "Follow orders, sales, and stock from here."
+msgstr "تابع الطلبات والمبيعات والمخزون من هنا."
+
+msgid "Sales in this period"
+msgstr "مبيعات الفترة"
+
+msgid "Open card"
+msgstr "افتح"
+
+msgid "Shortcuts"
+msgstr "اختصارات"
+
+msgid "The pages you use every day."
+msgstr "الصفحات التي تستخدمها كل يوم."
+
+msgid "Handle new orders"
+msgstr "تابع الطلبات الجديدة"
+
+msgid "Edit products"
+msgstr "عدّل المنتجات"
+
+msgid "Edit boxes"
+msgstr "عدّل البوكسات"
+
+msgid "See reviews"
+msgstr "اطّلع على التقييمات"
+
+msgid "Select an option"
+msgstr "اختر"
+
+msgid "Choose"
+msgstr "اختر"
+
+msgid "No account"
+msgstr "بدون حساب"
+
+msgid "Product names"
+msgstr "اسم المنتج"
+
+msgid "Product story"
+msgstr "الوصف"
+
+msgid "Where it appears"
+msgstr "ظهور المنتج"
+
+msgid "Choose the category and brand, and leave the barcode empty if you do not have it."
+msgstr "اختر التصنيف والماركة، واترك الباركود فارغًا إن لم يكن متوفرًا."
+
+msgid "Delivery details"
+msgstr "بيانات التوصيل"
+
+msgid "The order comes from the website, so these details stay as the customer wrote them."
+msgstr "الطلب مسجّل من الموقع. اترك البيانات كما كتبها العميل."
+
+msgid "Cash is collected on delivery. Send the order out, then mark it received after the customer pays. Cancel only while it is still waiting, and the pieces go back."
+msgstr "الدفع عند الاستلام. أرسل الطلب، وبعد أن يستلمه العميل ويدفع، سجّله تم التسليم. ألغه فقط وهو بانتظار الدفع لتعود الكمية إلى المخزون."
+
+msgid "Cash on delivery"
+msgstr "الدفع عند الاستلام"
+
+msgid "Next step"
+msgstr "الخطوة التالية"
+
+msgid "No delivered sales in this period"
+msgstr "لا توجد مبيعات مُسلَّمة في هذه الفترة."
+
+msgid "Send it out"
+msgstr "إرسال للشحن"
+
+msgid "Cancel the order"
+msgstr "إلغاء الطلب"
+
+msgid "Received and paid"
+msgstr "تم التسليم والدفع"
+
+msgid "Send this order out for delivery?"
+msgstr "هل تريد إرسال الطلب للشحن؟"
+
+msgid "Cancel this order and put the pieces back?"
+msgstr "هل تريد إلغاء الطلب وإعادة الكمية؟"
+
+msgid "Did the customer receive it and pay?"
+msgstr "هل استلم العميل الطلب ودفع؟"
+
+msgid "This order was received and the cash was collected."
+msgstr "تم تسليم الطلب وتحصيل المبلغ."
+
+msgid "This order was cancelled and the pieces went back."
+msgstr "تم إلغاء الطلب وعادت الكمية."
+
+msgid "Nothing else to do on this order."
+msgstr "لا توجد خطوة أخرى لهذا الطلب."
+
+msgid "The order is out for delivery. Collect the cash when it arrives."
+msgstr "الطلب في الطريق. يُحصَّل المبلغ عند الوصول."
+
+msgid "Marked as received and paid on delivery."
+msgstr "تم تسجيل تسليم الطلب والدفع عند الاستلام."
+
+msgid "The order was cancelled and the pieces went back to stock."
+msgstr "تم إلغاء الطلب وعادت الكمية إلى المخزون."
+
+msgid "This order was already cancelled."
+msgstr "تم إلغاء هذا الطلب من قبل."
+
+msgid "This order was already updated."
+msgstr "تم تحديث حالة الطلب من قبل."
+
+msgid "This order cannot move to that step"
+msgstr "لا يمكن نقل الطلب إلى هذه الخطوة."
+
+msgid "Order status updated."
+msgstr "تم تغيير حالة الطلب."
+
+msgid "Order follow-up"
+msgstr "متابعة الطلب"
+
+msgid "Internal details"
+msgstr "تفاصيل داخلية"
+
+msgid "Only needed if something looks wrong."
+msgstr "تظهر عند الحاجة فقط، إذا بدا شيء غير صحيح."
+
+msgid "The review"
+msgstr "التقييم"
+
+msgid "Category names"
+msgstr "اسم التصنيف"
+
+msgid "Brand names"
+msgstr "اسم الماركة"
+
+msgid "Box names"
+msgstr "اسم البوكس"
+
+msgid "Box story"
+msgstr "وصف البوكس"
+
+msgid "Price and stock"
+msgstr "السعر والمخزون"
+
+msgid "Record dates"
+msgstr "تواريخ التسجيل"
+
+msgid "Collection names"
+msgstr "اسم المجموعة"
+
+msgid "What is on offer"
+msgstr "موضوع العرض"
+
+msgid "Choose either a product option or a box, not both."
+msgstr "اختر خيار منتج أو بوكس، وليس الاثنين معًا."
+
+msgid "Select any number of product options and boxes. The same price and period apply to all of them."
+msgstr "اختر أي عدد من خيارات المنتجات والبوكسات. نفس السعر والمدة يطبقوا عليهم كلهم."
+
+msgid "Choose at least one product option or box."
+msgstr "اختر خيار منتج أو بوكس واحد على الأقل."
+
+msgid "Offer price must be lower than the regular price of %(items)s."
+msgstr "يجب أن يكون سعر العرض أقل من السعر الأصلي لـ %(items)s."
+
+msgid "An active offer already overlaps this period for %(items)s."
+msgstr "يوجد عرض نشط بالفعل على %(items)s خلال هذه الفترة."
+
+msgid "Product options"
+msgstr "خيارات المنتجات"
+
+msgid "Offer period"
+msgstr "مدة العرض"
+
+msgid "Image of %(name)s"
+msgstr "صورة %(name)s"
+
+msgid "Order %(number)s — %(name)s"
+msgstr "طلب %(number)s — %(name)s"
+
+msgid "Offer for %(item)s"
+msgstr "عرض على %(item)s"
+
+msgid "Daily offer"
+msgstr "عرض اليوم"
+
+msgid "Saved box details"
+msgstr "بيانات البوكس وقت الطلب"
+
+msgid "Pieces in stock"
+msgstr "الكمية"
+
+msgid "Visible"
+msgstr "ظاهرة"
+
+msgid "Hidden"
+msgstr "مخفية"
+
+msgid "From"
+msgstr "من"
+
+msgid "Visible products"
+msgstr "منتجات ظاهرة"
+
+msgid "All products"
+msgstr "كل المنتجات"
+
+msgid "Running low"
+msgstr "أوشكت على النفاد"
+
+msgid "Pieces sold"
+msgstr "قطع مبيعة"
+
+msgid "Price"
+msgstr "السعر"
+
+msgid "Order contents"
+msgstr "محتويات الطلب"
+
+msgid "Product line"
+msgstr "منتج"
+
+msgid "Box line"
+msgstr "بوكس"
+
+msgid "Kind"
+msgstr "النوع"
+
+msgid "Piece"
+msgstr "الصنف"
+
+msgid "This order has no items."
+msgstr "لا توجد أصناف في هذا الطلب."
+
+msgid "Sign in to the store"
+msgstr "الدخول إلى لوحة المتجر"
+
+msgid "Use your phone number and password."
+msgstr "أدخل رقم الهاتف وكلمة المرور."
+
+msgid "Sign in"
+msgstr "ادخلي"
+
+msgid "You are signed in as %(username)s, but this account cannot open the store."
+msgstr "أنت مسجّل الدخول بحساب %(username)s، وهذا الحساب لا يمكنه فتح لوحة المتجر."
+
+msgid "Visible boxes"
+msgstr "بوكسات ظاهرة"
+
+msgid "All boxes"
+msgstr "كل البوكسات"
+
+msgid "Boxes sold"
+msgstr "بوكسات مبيعة"
+
+msgid "Customers"
+msgstr "العملاء"
+
+msgid "Waiting to ship"
+msgstr "بانتظار الشحن"
+
+msgid "In transit"
+msgstr "في الطريق"
+
+msgid "Today's queue"
+msgstr "طابور اليوم"
+
+msgid "Orders waiting to ship or still on the way."
+msgstr "الطلبات التي تنتظر الشحن أو ما زالت في الطريق."
+
+msgid "No orders need a step."
+msgstr "لا توجد طلبات تحتاج إلى خطوة."
+
+msgid "Order count"
+msgstr "عدد الطلبات"
+
+msgid "Last order"
+msgstr "آخر طلب"
+
+msgid "Stock"
+msgstr "المخزون"
+
+msgid "Welcome back"
+msgstr "أهلًا بعودتك"
+
+msgid "Here's what is happening in the store today."
+msgstr "هذا ما يحدث في المتجر اليوم."
+
+msgid "Total revenue"
+msgstr "إجمالي المبيعات"
+
+msgid "Total orders"
+msgstr "كل الطلبات"
+
+msgid "New customers"
+msgstr "عملاء جدد"
+
+msgid "Average order"
+msgstr "متوسط الطلب"
+
+msgid "Sales overview"
+msgstr "نظرة على المبيعات"
+
+msgid "Order statuses"
+msgstr "حالات الطلبات"
+
+msgid "Top selling products"
+msgstr "الأكثر مبيعًا"
+
+msgid "Recent orders"
+msgstr "أحدث الطلبات"
+
+msgid "Sales"
+msgstr "المبيعات"
+
+msgid "Revenue"
+msgstr "الإيراد"
+
+msgid "Out of stock"
+msgstr "نفد المخزون"
+
+msgid "In stock"
+msgstr "متوفر"
+
+msgid "Marketing"
+msgstr "التسويق"
+
+msgid "Reports"
+msgstr "التقارير"
+
+msgid "Coupons"
+msgstr "الكوبونات"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Super Admin"
+msgstr "مدير عام"
+
+msgid "Store admin"
+msgstr "مدير"
+
+msgid "Search..."
+msgstr "ابحث..."
+
+msgid "Orders waiting"
+msgstr "طلبات بانتظار المتابعة"
+
+msgid "Last 7 days"
+msgstr "آخر ٧ أيام"
+
+msgid "This month"
+msgstr "هذا الشهر"
+
+msgid "Last 90 days"
+msgstr "آخر ٩٠ يومًا"
+
+msgid "Order number"
+msgstr "رقم الطلب"
+
+msgid "Manage and track all customer orders."
+msgstr "تابع طلبات العملاء من هنا."
+
+msgid "Search orders..."
+msgstr "ابحث في الطلبات..."
+
+msgid "View order"
+msgstr "عرض الطلب"
+
+msgid "Showing %(shown)s of %(total)s"
+msgstr "عرض %(shown)s من %(total)s"
+
+msgid "Manage your product catalog."
+msgstr "إدارة منتجات المتجر."
+
+msgid "Add product"
+msgstr "أضف منتجًا"
+
+msgid "Search products..."
+msgstr "ابحث في المنتجات..."
+
+msgid "Edit product"
+msgstr "تعديل المنتج"
+
+msgid "No products yet."
+msgstr "لا توجد منتجات بعد."
+
+msgid "Bundles ready for the store."
+msgstr "البوكسات الجاهزة في المتجر."
+
+msgid "Add box"
+msgstr "أضف بوكسًا"
+
+msgid "Search boxes..."
+msgstr "ابحث في البوكسات..."
+
+msgid "Edit box"
+msgstr "تعديل البوكس"
+
+msgid "No boxes yet."
+msgstr "لا توجد بوكسات بعد."
+
+msgid "Order #%(number)s"
+msgstr "طلب %(number)s"
+
+msgid "Coupon codes are not set up on the store yet."
+msgstr "لا توجد كوبونات في المتجر بعد."
+
+msgid "Store settings stay in the catalog: brands, categories, and your password."
+msgstr "إعدادات المتجر من الماركات والتصنيفات وكلمة المرور."
+
+msgid "Actions"
+msgstr "الإجراءات"
+
+msgid "Previous"
+msgstr "السابق"
+
+msgid "Next"
+msgstr "التالي"
+
+msgid "Press a box to add it to this collection or take it out."
+msgstr "اضغط على البوكس عشان يدخل المجموعة أو يخرج منها."
+
+msgid "In this collection"
+msgstr "في المجموعة"
+
+msgid "For sale"
+msgstr "متاح للبيع" 
+
+msgid "No boxes match this search."
+msgstr "لا توجد بوكسات بهذا الاسم."
+
+msgid "Not for sale"
+msgstr "مش متاح للبيع"
+
+msgid "Shown for sale"
+msgstr "ظاهر للبيع"
+
+msgid "New option"
+msgstr "خيار جديد"
+
+msgid "Add an option"
+msgstr "أضف خيار"
+
+msgid "Add an option so this product can be sold."
+msgstr "أضف خيار عشان المنتج يتباع."
+
+msgid "This option will be removed when you save."
+msgstr "الخيار ده هيتحذف لما تحفظ."
+
+msgid "Product option"
+msgstr "خيار المنتج"
+
+msgid "Follow today's offers."
+msgstr "تابع عروض اليوم."
+
+msgid "Add an offer"
+msgstr "أضف عرض"
+
+msgid "Search offers..."
+msgstr "ابحث في العروض..."
+
+msgid "Regular price"
+msgstr "السعر الأصلي"
+
+msgid "Running"
+msgstr "جارٍ"
+
+msgid "Not started"
+msgstr "لم يبدأ"
+
+msgid "Ended"
+msgstr "انتهى"
+
+msgid "Stopped"
+msgstr "متوقف"
+
+msgid "Edit offer"
+msgstr "تعديل العرض"
+
+msgid "No offers yet."
+msgstr "لا توجد عروض بعد."
+
+msgid "Inventory"
+msgstr "المخزون"
+
+msgid "Activity log"
+msgstr "سجل النشاط"
+
+msgid "Shipping"
+msgstr "الشحن"
+
+msgid "Change selected %(model)s"
+msgstr "تعديل %(model)s"
+
+msgid "Add another %(model)s"
+msgstr "إضافة %(model)s"
+
+msgid "View selected %(model)s"
+msgstr "عرض %(model)s"
+
+msgid "Delete selected %(model)s"
+msgstr "حذف %(model)s"
+
+msgid "Today"
+msgstr "اليوم"
+
+msgid "Yesterday"
+msgstr "أمس"
+
+msgid "Custom"
+msgstr "مخصص"
+
+msgid "To"
+msgstr "إلى"

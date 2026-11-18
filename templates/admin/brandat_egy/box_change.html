@@ -1,0 +1,479 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+{% endblock %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<form class="studio-page" id="box_form" method="post" enctype="multipart/form-data" data-testid="box-detail">
+    {% csrf_token %}
+    {% if errors %}{% include "unfold/helpers/messages/errornote.html" %}{% endif %}
+    {{ adminform.form.non_field_errors }}
+    {% for inline_admin_formset in inline_admin_formsets %}
+        {% if inline_admin_formset.formset.prefix != "images" %}
+        {{ inline_admin_formset.formset.management_form }}
+        {{ inline_admin_formset.formset.non_form_errors }}
+        {% endif %}
+    {% endfor %}
+
+    <div class="studio-head">
+        <div>
+            <h1>تفاصيل البوكس</h1>
+            <p>أضف أو عدّل بوكس فيه أكتر من منتج</p>
+        </div>
+    </div>
+
+    <section class="studio-card">
+        <h2><span class="material-symbols-outlined">image</span> صور البوكس</h2>
+        {% for inline_admin_formset in inline_admin_formsets %}
+            {% if inline_admin_formset.formset.prefix == "images" %}
+            <div class="formset-wrapper">
+                {{ inline_admin_formset.formset.management_form }}
+                {{ inline_admin_formset.formset.non_form_errors }}
+                <div class="formset studio-photos" data-inline-formset="{{ inline_admin_formset.inline_formset_data }}">
+                    {% for inline_admin_form in inline_admin_formset %}
+                    <div class="form-group studio-photo-card product-photo{% if forloop.last and inline_admin_formset.has_add_permission %} empty-form{% endif %}">
+                        <div class="form-row">
+                            {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+                            {% if inline_admin_form.pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
+                            {% if inline_admin_form.original and inline_admin_form.original.image %}
+                            <div class="studio-photo-frame">
+                                <button type="button" class="product-zoom" data-testid="box-image-zoom" data-src="{{ inline_admin_form.original.image.url }}" aria-label="تكبير الصورة">
+                                    <img src="{{ inline_admin_form.original.image.url }}" alt="">
+                                </button>
+                                <label class="product-photo-change">
+                                    غيّر الصورة
+                                    {{ inline_admin_form.form.image }}
+                                </label>
+                            </div>
+                            {% else %}
+                            <label class="studio-photo-frame studio-photo-frame--empty">
+                                <span class="material-symbols-outlined">add_photo_alternate</span>
+                                <span>ارفع صورة</span>
+                                {{ inline_admin_form.form.image }}
+                            </label>
+                            {% endif %}
+                            {{ inline_admin_form.form.image.errors }}
+                            <div class="studio-photo-actions">
+                                <label class="studio-check">
+                                    {{ inline_admin_form.form.is_main }}
+                                    رئيسية
+                                </label>
+                            </div>
+                            {% if inline_admin_form.original %}
+                            <label class="product-photo-remove" aria-label="شيل الصورة">
+                                {{ inline_admin_form.deletion_field.field }}
+                                <span class="material-symbols-outlined">close</span>
+                            </label>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if inline_admin_formset.has_add_permission %}
+                    <div class="form-actions">
+                        <button type="button" class="add-row product-add-variant" data-testid="box-add-image">+ ارفع صورة</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </section>
+
+    <div class="studio-grid-2">
+        <section class="studio-card">
+            <h2><span class="material-symbols-outlined">inventory_2</span> بيانات البوكس</h2>
+            <div class="studio-fields">
+                <div class="studio-field studio-field--wide">
+                    <label for="{{ adminform.form.name_ar.id_for_label }}">اسم البوكس</label>
+                    {{ adminform.form.name_ar }}
+                    {{ adminform.form.name_ar.errors }}
+                </div>
+                <div class="studio-field studio-field--wide">
+                    <label for="{{ adminform.form.description_ar.id_for_label }}">الوصف</label>
+                    {{ adminform.form.description_ar }}
+                    {{ adminform.form.description_ar.errors }}
+                </div>
+                <div class="studio-field">
+                    <label for="{{ adminform.form.stock.id_for_label }}">الكمية في المخزون</label>
+                    {{ adminform.form.stock }}
+                    {{ adminform.form.stock.errors }}
+                </div>
+                <div class="studio-field">
+                    <span class="studio-label">الحالة</span>
+                    <label class="studio-check">
+                        {{ adminform.form.is_active }}
+                        ظاهر للبيع
+                    </label>
+                    {{ adminform.form.is_active.errors }}
+                </div>
+                <div class="studio-field">
+                    <label for="{{ adminform.form.name_en.id_for_label }}">الاسم بالإنجليزي</label>
+                    {{ adminform.form.name_en }}
+                    {{ adminform.form.name_en.errors }}
+                </div>
+                <div class="studio-field">
+                    <label for="{{ adminform.form.description_en.id_for_label }}">الوصف بالإنجليزي</label>
+                    {{ adminform.form.description_en }}
+                    {{ adminform.form.description_en.errors }}
+                </div>
+            </div>
+        </section>
+
+        <div>
+            <section class="studio-card">
+                <h2><span class="material-symbols-outlined">payments</span> التسعير</h2>
+                <div class="studio-fields">
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.price.id_for_label }}">السعر</label>
+                        {{ adminform.form.price }}
+                        {{ adminform.form.price.errors }}
+                    </div>
+                    <div class="studio-field">
+                        <label for="{{ adminform.form.discount_price.id_for_label }}">سعر الخصم</label>
+                        {{ adminform.form.discount_price }}
+                        {{ adminform.form.discount_price.errors }}
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="studio-card" data-testid="box-items">
+        <div class="studio-card-head">
+            <h2><span class="material-symbols-outlined">inventory_2</span> منتجات البوكس</h2>
+        </div>
+        {% for inline_admin_formset in inline_admin_formsets %}
+            {% if inline_admin_formset.formset.prefix == "items" %}
+            <div class="box-picker">
+                <label class="box-search">
+                    <span class="material-symbols-outlined">search</span>
+                    <input type="search" data-testid="box-item-search" placeholder="ابحث بالاسم أو الباركود" autocomplete="off">
+                </label>
+                <div class="box-results" data-testid="box-item-results" hidden></div>
+                <div class="box-chosen-head">
+                    <span>المنتج</span>
+                    <span>سعر القطعة</span>
+                    <span>الكمية</span>
+                    <span>الإجمالي</span>
+                </div>
+                <div class="box-chosen-list" data-testid="box-item-list"></div>
+                <p class="studio-muted" data-testid="box-item-empty">ابحث عن منتج وأضفه للبوكس.</p>
+                <div class="box-forms" data-testid="box-item-forms">
+                    {% for inline_admin_form in inline_admin_formset %}
+                    <div data-item-form>
+                        {% if inline_admin_form.fk_field %}{{ inline_admin_form.fk_field.field }}{% endif %}
+                        {% if inline_admin_form.pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
+                        {{ inline_admin_form.form.variant }}
+                        {{ inline_admin_form.form.quantity }}
+                        {% if inline_admin_form.deletion_field %}{{ inline_admin_form.deletion_field.field }}{% endif %}
+                        {{ inline_admin_form.form.variant.errors }}
+                        {{ inline_admin_form.form.quantity.errors }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <template id="box-item-template">
+                    <div data-item-form>
+                        {% for field in inline_admin_formset.formset.empty_form.hidden_fields %}{{ field }}{% endfor %}
+                        {{ inline_admin_formset.formset.empty_form.quantity }}
+                        {% if inline_admin_formset.formset.empty_form.DELETE %}{{ inline_admin_formset.formset.empty_form.DELETE }}{% endif %}
+                    </div>
+                </template>
+            </div>
+            {{ box_variant_catalog|json_script:"box-variant-catalog" }}
+            {% endif %}
+        {% endfor %}
+    </section>
+
+    <section class="studio-card studio-summary">
+        <div class="studio-product">
+            <span class="studio-thumb"><span class="material-symbols-outlined">shopping_bag</span></span>
+            <div>
+                <strong>ملخص البوكس</strong>
+                <small class="studio-muted">عدد القطع <span data-testid="box-total-items">{% if original %}{{ original.items.count }}{% else %}0{% endif %}</span></small>
+            </div>
+        </div>
+        <div>
+            سعر البوكس
+            <strong data-testid="box-final-value">{% if original %}{{ original.final_price|floatformat:0 }}{% else %}0{% endif %} ج.م</strong>
+            <span class="studio-save" data-testid="box-save-amount" hidden></span>
+        </div>
+        <div class="studio-actions">
+            <a class="studio-btn-ghost" data-testid="box-cancel" href="{% url 'admin:brandat_egy_box_changelist' %}">إلغاء</a>
+            <button class="studio-btn-primary" type="submit" name="_save" data-testid="box-save">
+                <span class="material-symbols-outlined">save</span>
+                احفظ البوكس
+            </button>
+        </div>
+    </section>
+</form>
+<script>
+(function () {
+    var root = document.querySelector("[data-testid='box-detail']");
+    if (!root) return;
+    var price = root.querySelector("[name='price']");
+    var discount = root.querySelector("[name='discount_price']");
+    var itemsEl = root.querySelector("[data-testid='box-total-items']");
+    var finalEl = root.querySelector("[data-testid='box-final-value']");
+    var saveEl = root.querySelector("[data-testid='box-save-amount']");
+    var catalogNode = document.getElementById("box-variant-catalog");
+    var catalog = catalogNode ? JSON.parse(catalogNode.textContent) : [];
+    var byId = {};
+    catalog.forEach(function (item) { byId[String(item.id)] = item; });
+    var search = root.querySelector("[data-testid='box-item-search']");
+    var results = root.querySelector("[data-testid='box-item-results']");
+    var list = root.querySelector("[data-testid='box-item-list']");
+    var empty = root.querySelector("[data-testid='box-item-empty']");
+    var forms = root.querySelector("[data-testid='box-item-forms']");
+    var template = document.getElementById("box-item-template");
+    var totalInput = root.querySelector("[name='items-TOTAL_FORMS']");
+
+    function money(value) {
+        return Number(value || 0).toLocaleString("ar-EG") + " ج.م";
+    }
+
+    function activeForms() {
+        return Array.prototype.filter.call(
+            forms.querySelectorAll("[data-item-form]"),
+            function (formEl) {
+                var variant = formEl.querySelector("[name$='-variant']");
+                var deleted = formEl.querySelector("[name$='-DELETE']");
+                return variant && variant.value && !(deleted && deleted.checked);
+            }
+        );
+    }
+
+    function paint() {
+        forms.querySelectorAll("[name$='-quantity']").forEach(function (input) {
+            var formEl = input.closest("[data-item-form]");
+            if (formEl && input.parentElement !== formEl) formEl.appendChild(input);
+        });
+        list.replaceChildren();
+        var pieces = 0;
+        activeForms().forEach(function (formEl) {
+            var variant = formEl.querySelector("[name$='-variant']");
+            var quantity = formEl.querySelector("[name$='-quantity']");
+            var item = byId[variant.value] || { name: "منتج", detail: "", price: "0", stock: 0, image: "" };
+            quantity.min = "1";
+            var qty = Number(quantity.value || 0);
+            pieces += qty;
+            var row = document.createElement("div");
+            row.className = "box-chosen";
+            row.setAttribute("data-testid", "box-item-row");
+            row.dataset.price = item.price;
+            var thumb = document.createElement(item.image ? "img" : "span");
+            if (item.image) thumb.src = item.image;
+            else {
+                thumb.className = "studio-thumb";
+                thumb.textContent = (item.name || "؟").slice(0, 1);
+            }
+            var name = document.createElement("span");
+            name.className = "box-chosen-name";
+            var title = document.createElement("strong");
+            title.textContent = item.name;
+            var meta = document.createElement("small");
+            meta.textContent = [item.detail, "المخزون " + item.stock].filter(Boolean).join(" · ");
+            name.append(title, meta);
+            var product = document.createElement(item.url ? "a" : "span");
+            if (item.url) {
+                product.href = item.url;
+                product.className = "box-product-link";
+                product.setAttribute("data-testid", "box-product-" + item.product_id);
+            }
+            product.append(thumb, name);
+            var unit = document.createElement("span");
+            unit.className = "box-chosen-price";
+            unit.textContent = money(item.price);
+            var line = document.createElement("span");
+            line.className = "box-line";
+            line.textContent = money(Number(item.price) * qty);
+            var remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "studio-trash";
+            remove.setAttribute("data-testid", "box-item-remove");
+            remove.setAttribute("aria-label", "شيل المنتج من البوكس");
+            remove.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+            remove.addEventListener("click", function () {
+                var deleted = formEl.querySelector("[name$='-DELETE']");
+                if (deleted) deleted.checked = true;
+                paint();
+                renderSummary();
+            });
+            row.append(product, unit, quantity, line, remove);
+            list.appendChild(row);
+        });
+        if (itemsEl) itemsEl.textContent = String(pieces);
+        if (empty) empty.hidden = pieces > 0;
+    }
+
+    function renderSummary() {
+        var regular = Number(price && price.value);
+        var sale = Number(discount && discount.value);
+        var finalPrice = sale > 0 ? sale : regular;
+        if (finalEl) finalEl.textContent = (Number.isFinite(finalPrice) ? finalPrice.toLocaleString("ar-EG") : "0") + " ج.م";
+        if (saveEl) {
+            var saved = regular > 0 && sale > 0 && regular > sale ? regular - sale : 0;
+            saveEl.hidden = saved <= 0;
+            saveEl.textContent = saved > 0 ? "توفير " + saved.toLocaleString("ar-EG") + " ج.م" : "";
+        }
+    }
+
+    function addVariant(id) {
+        var found = null;
+        forms.querySelectorAll("[data-item-form]").forEach(function (formEl) {
+            var variant = formEl.querySelector("[name$='-variant']");
+            if (variant && variant.value === String(id)) found = formEl;
+        });
+        if (found) {
+            var deleted = found.querySelector("[name$='-DELETE']");
+            var quantity = found.querySelector("[name$='-quantity']");
+            if (deleted && deleted.checked) {
+                deleted.checked = false;
+                quantity.value = "1";
+            } else {
+                quantity.value = String(Number(quantity.value || 0) + 1);
+            }
+        } else {
+            var index = Number(totalInput.value || 0);
+            var node = template.content.cloneNode(true);
+            node.querySelectorAll("[name],[id]").forEach(function (el) {
+                ["name", "id"].forEach(function (attr) {
+                    var value = el.getAttribute(attr);
+                    if (value) el.setAttribute(attr, value.replaceAll("__prefix__", String(index)));
+                });
+            });
+            forms.appendChild(node);
+            var added = forms.lastElementChild;
+            added.querySelector("[name$='-variant']").value = String(id);
+            added.querySelector("[name$='-quantity']").value = "1";
+            totalInput.value = String(index + 1);
+        }
+        if (search) search.value = "";
+        if (results) results.hidden = true;
+        paint();
+        renderSummary();
+    }
+
+    function showResults() {
+        if (!results || !search) return;
+        var query = search.value.trim().toLowerCase();
+        results.replaceChildren();
+        if (!query) {
+            results.hidden = true;
+            return;
+        }
+        var chosen = {};
+        activeForms().forEach(function (formEl) {
+            chosen[formEl.querySelector("[name$='-variant']").value] = true;
+        });
+        var matches = catalog.filter(function (item) {
+            return item.search.indexOf(query) !== -1;
+        }).slice(0, 8);
+        if (!matches.length) {
+            var none = document.createElement("p");
+            none.className = "studio-muted";
+            none.textContent = "لا يوجد منتج بهذا الاسم.";
+            results.appendChild(none);
+            results.hidden = false;
+            return;
+        }
+        matches.forEach(function (item) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "box-result";
+            button.setAttribute("data-testid", "box-item-add");
+            button.dataset.variantId = String(item.id);
+            var thumb = document.createElement(item.image ? "img" : "span");
+            if (item.image) thumb.src = item.image;
+            else {
+                thumb.className = "studio-thumb";
+                thumb.textContent = item.name.slice(0, 1);
+            }
+            var text = document.createElement("span");
+            var title = document.createElement("strong");
+            title.textContent = item.name;
+            var meta = document.createElement("small");
+            meta.textContent = [item.detail, "المخزون " + item.stock].filter(Boolean).join(" · ");
+            text.append(title, meta);
+            var action = document.createElement("b");
+            action.textContent = chosen[String(item.id)] ? "زيادة الكمية" : "أضف";
+            button.append(thumb, text, action);
+            results.appendChild(button);
+        });
+        results.hidden = false;
+    }
+
+    function onInput(event) {
+        if (event.target && event.target.classList.contains("box-qty")) {
+            var row = event.target.closest(".box-chosen");
+            if (row) {
+                row.querySelector(".box-line").textContent = money(Number(row.dataset.price) * Number(event.target.value || 0));
+            }
+            var pieces = 0;
+            list.querySelectorAll(".box-qty").forEach(function (input) {
+                pieces += Number(input.value || 0);
+            });
+            if (itemsEl) itemsEl.textContent = String(pieces);
+        }
+        renderSummary();
+    }
+    function onClick(event) {
+        var button = event.target.closest("[data-testid='box-item-add']");
+        if (!button || !root.contains(button)) return;
+        addVariant(button.dataset.variantId);
+    }
+    function onSearch() { showResults(); }
+    if (search) search.addEventListener("input", onSearch);
+    root.addEventListener("input", onInput);
+    root.addEventListener("click", onClick);
+    window.addEventListener("pagehide", function () {
+        if (search) search.removeEventListener("input", onSearch);
+        root.removeEventListener("input", onInput);
+        root.removeEventListener("click", onClick);
+    }, { once: true });
+    paint();
+    renderSummary();
+})();
+</script>
+<div class="product-lightbox" data-testid="box-lightbox" hidden>
+    <button type="button" class="product-lightbox-close" data-testid="box-lightbox-close" aria-label="إغلاق">
+        <span class="material-symbols-outlined">close</span>
+    </button>
+    <img alt="" data-testid="box-lightbox-image">
+</div>
+<script>
+(function () {
+    var lightbox = document.querySelector("[data-testid='box-lightbox']");
+    var image = document.querySelector("[data-testid='box-lightbox-image']");
+    if (!lightbox || !image) return;
+    function closeLightbox() {
+        lightbox.hidden = true;
+        image.removeAttribute("src");
+    }
+    function onClick(event) {
+        var zoom = event.target.closest("[data-testid='box-image-zoom']");
+        if (zoom) {
+            image.src = zoom.getAttribute("data-src");
+            lightbox.hidden = false;
+            return;
+        }
+        if (event.target === lightbox || event.target.closest("[data-testid='box-lightbox-close']")) {
+            closeLightbox();
+        }
+    }
+    function onKey(event) {
+        if (event.key === "Escape") closeLightbox();
+    }
+    document.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("pagehide", function () {
+        document.removeEventListener("click", onClick);
+        document.removeEventListener("keydown", onKey);
+    }, { once: true });
+})();
+</script>
+{% endblock %}

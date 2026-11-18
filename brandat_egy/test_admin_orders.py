@@ -59,7 +59,7 @@ class AdminOrdersAPITests(APITestCase):
             customer_name="Test Customer",
             phone="01012345678",
             address="Cairo",
-            status="pending",
+            status="confirmed",
         )
 
         OrderItem.objects.create(
@@ -120,6 +120,14 @@ class AdminOrdersAPITests(APITestCase):
         self.assertTrue(response.data["is_guest"])
 
     def test_admin_can_ship_then_deliver(self):
+        preparing = self.client.patch(
+            self.status_url,
+            {"status": "preparing"},
+            format="json",
+        )
+
+        self.assertEqual(preparing.status_code, 200)
+
         shipped = self.client.patch(
             self.status_url,
             {"status": "shipped"},
@@ -150,18 +158,18 @@ class AdminOrdersAPITests(APITestCase):
         self.assertEqual(response.status_code, 409)
 
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, "pending")
+        self.assertEqual(self.order.status, "confirmed")
 
     def test_repeated_status_update_is_safe(self):
         self.client.patch(
             self.status_url,
-            {"status": "shipped"},
+            {"status": "preparing"},
             format="json",
         )
 
         response = self.client.patch(
             self.status_url,
-            {"status": "shipped"},
+            {"status": "preparing"},
             format="json",
         )
 
@@ -229,17 +237,33 @@ class AdminOrdersAPITests(APITestCase):
         self.assertEqual(self.variant.stock, 10)
         self.assertEqual(self.box.stock, 3)
 
-    def test_shipped_order_cannot_be_cancelled(self):
+    def test_shipped_order_can_be_cancelled(self):
         self.order.status = "shipped"
         self.order.save(update_fields=["status"])
 
         response = self.client.post(self.cancel_url)
 
-        self.assertEqual(response.status_code, 409)
-
+        self.assertEqual(response.status_code, 200)
+        self.order.refresh_from_db()
         self.variant.refresh_from_db()
         self.box.refresh_from_db()
 
+        self.assertEqual(self.order.status, "cancelled")
+        self.assertEqual(self.variant.stock, 10)
+        self.assertEqual(self.box.stock, 3)
+
+    def test_delivered_order_cannot_be_cancelled(self):
+        self.order.status = "delivered"
+        self.order.save(update_fields=["status"])
+
+        response = self.client.post(self.cancel_url)
+
+        self.assertEqual(response.status_code, 409)
+        self.order.refresh_from_db()
+        self.variant.refresh_from_db()
+        self.box.refresh_from_db()
+
+        self.assertEqual(self.order.status, "delivered")
         self.assertEqual(self.variant.stock, 6)
         self.assertEqual(self.box.stock, 2)
 
@@ -296,4 +320,4 @@ class AdminOrdersAPITests(APITestCase):
         self.assertEqual(response.status_code, 400)
 
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, "pending")
+        self.assertEqual(self.order.status, "confirmed")

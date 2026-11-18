@@ -1,0 +1,217 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+{% trans "Start preparing this order?" as prepare_confirm %}
+{% trans "Send this order out for delivery?" as ship_confirm %}
+{% trans "Did the customer receive it and pay?" as deliver_confirm %}
+{% trans "Cancel this order and put the pieces back?" as cancel_confirm %}
+<section class="studio-page" data-testid="order-detail">
+    <div class="studio-head">
+        <div>
+            <h1>تفاصيل الطلب</h1>
+            <p>طلب رقم {{ original.pk }}</p>
+        </div>
+        <div class="studio-actions">
+            <button class="studio-btn" type="button" data-testid="order-print" onclick="window.print()">
+                <span class="material-symbols-outlined">print</span>
+                طباعة الفاتورة
+            </button>
+            {% if original.status == "confirmed" or original.status == "pending" %}
+            <form method="post" action="{% url 'admin:brandat_egy_order_step' original.pk 'prepare' %}">
+                {% csrf_token %}
+                <button class="studio-btn" type="submit" data-testid="order-prepare-{{ original.pk }}" onclick="return confirm('{{ prepare_confirm|escapejs }}')">ابدأ التجهيز</button>
+            </form>
+            {% elif original.status == "preparing" %}
+            <form method="post" action="{% url 'admin:brandat_egy_order_step' original.pk 'ship' %}">
+                {% csrf_token %}
+                <button class="studio-btn" type="submit" data-testid="order-ship-{{ original.pk }}" onclick="return confirm('{{ ship_confirm|escapejs }}')">أخرج الطلب للتوصيل</button>
+            </form>
+            {% elif original.status == "shipped" %}
+            <form method="post" action="{% url 'admin:brandat_egy_order_step' original.pk 'deliver' %}">
+                {% csrf_token %}
+                <button class="studio-btn" type="submit" data-testid="order-deliver-{{ original.pk }}" onclick="return confirm('{{ deliver_confirm|escapejs }}')">تم الاستلام والدفع</button>
+            </form>
+            {% endif %}
+            {% if original.user_id and perms.accounts.view_user %}
+            <a class="studio-btn-primary" data-testid="view-customer" href="{% url 'admin:accounts_user_change' original.user_id %}">عرض العميل</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="studio-grid-2">
+        <section class="studio-card">
+            <h2><span class="material-symbols-outlined">person</span> بيانات العميل</h2>
+            <div class="studio-facts">
+                <div class="studio-fact"><span class="material-symbols-outlined">person</span><span>{{ original.customer_name }}</span></div>
+                <div class="studio-fact"><span class="material-symbols-outlined">call</span><span dir="ltr">{{ original.phone }}</span></div>
+                <div class="studio-fact"><span class="material-symbols-outlined">mail</span><span>{% if original.email %}{{ original.email }}{% else %}بدون بريد{% endif %}</span></div>
+                <div class="studio-fact"><span class="material-symbols-outlined">location_on</span><span>{{ original.address }}</span></div>
+            </div>
+        </section>
+        <section class="studio-card">
+            <div class="studio-card-head">
+                <h2><span class="material-symbols-outlined">receipt_long</span> ملخص الطلب</h2>
+                {% if customer_stats.registered %}
+                <span class="studio-pill">عميل مسجّل</span>
+                {% else %}
+                <span class="studio-pill studio-pill--amber">طلب زائر</span>
+                {% endif %}
+            </div>
+            <div class="studio-facts">
+                <div class="studio-fact"><span>عميل من</span><strong>{% if customer_stats.since %}{{ customer_stats.since|date:"j F Y" }}{% else %}—{% endif %}</strong></div>
+                <div class="studio-fact"><span>عدد الطلبات</span><strong>{{ customer_stats.orders }}</strong></div>
+                <div class="studio-fact"><span>مدفوع عند التسليم</span><strong>{{ customer_stats.spent|floatformat:0 }} ج.م</strong></div>
+            </div>
+            <div class="studio-facts">
+                <div class="studio-fact">
+                    <span>الشحن{% if original.governorate %} — {{ original.governorate.name_ar }}{% endif %}</span>
+                    <strong>{{ original.shipping_fee|floatformat:0 }} ج.م</strong>
+                </div>
+            </div>
+            <div class="studio-total">
+                <span>الإجمالي</span>
+                <span>{{ original.total_price|floatformat:0 }} ج.م</span>
+            </div>
+        </section>
+    </div>
+
+    <section class="studio-card">
+        <h2>محتويات الطلب ({{ original.items.count|add:original.boxes.count }})</h2>
+        <div class="studio-table-wrap">
+            <table class="studio-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th>السعر</th>
+                        <th>الكمية</th>
+                        <th>الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in original.items.all %}
+                    <tr>
+                        <td class="studio-muted">{{ forloop.counter }}</td>
+                        <td>
+                            <a class="studio-product" data-testid="order-product-{{ item.variant.product_id }}" href="{% url 'admin:brandat_egy_product_change' item.variant.product_id %}">
+                                {% with photo=item.variant.product.images.all|first %}
+                                {% if photo %}
+                                <img src="{{ photo.image.url }}" alt="">
+                                {% else %}
+                                <span class="studio-thumb">{{ item.variant.product.name_ar|slice:":1" }}</span>
+                                {% endif %}
+                                {% endwith %}
+                                <span>{{ item.variant.product.name_ar }}<small>{{ item.variant.size }}</small></span>
+                            </a>
+                        </td>
+                        <td>{{ item.price|floatformat:0 }} ج.م</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.total_price|floatformat:0 }} ج.م</td>
+                    </tr>
+                    {% endfor %}
+                    {% for box in original.boxes.all %}
+                    <tr>
+                        <td class="studio-muted">{{ forloop.counter|add:original.items.count }}</td>
+                        <td>
+                            <div class="studio-product">
+                                <a class="studio-product" data-testid="order-box-{{ box.box_id }}" href="{% url 'admin:brandat_egy_box_change' box.box_id %}">
+                                    {% with photo=box.box.images.all|first %}
+                                    {% if photo %}
+                                    <img src="{{ photo.image.url }}" alt="">
+                                    {% else %}
+                                    <span class="studio-thumb">{{ box.name_ar|slice:":1" }}</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                    <span>{{ box.name_ar }}<small>بوكس</small></span>
+                                </a>
+                                <span class="studio-mini-photos">
+                                    {% for part in box.items.all %}
+                                    <a data-testid="order-box-product-{{ part.variant.product_id }}" href="{% url 'admin:brandat_egy_product_change' part.variant.product_id %}" title="{{ part.product_name_ar }}">
+                                        {% with part_photo=part.variant.product.images.all|first %}
+                                        {% if part_photo %}
+                                        <img src="{{ part_photo.image.url }}" alt="{{ part.product_name_ar }}">
+                                        {% else %}
+                                        <span class="studio-thumb">{{ part.product_name_ar|slice:":1" }}</span>
+                                        {% endif %}
+                                        {% endwith %}
+                                    </a>
+                                    {% endfor %}
+                                </span>
+                            </div>
+                        </td>
+                        <td>{{ box.price|floatformat:0 }} ج.م</td>
+                        <td>{{ box.quantity }}</td>
+                        <td>{{ box.total_price|floatformat:0 }} ج.م</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="studio-grid-3">
+        <section class="studio-card">
+            <h2><span class="material-symbols-outlined">local_shipping</span> التوصيل</h2>
+            <div class="studio-facts">
+                <div class="studio-fact"><span class="material-symbols-outlined">location_on</span><span>{{ original.address }}</span></div>
+                <div class="studio-fact"><span class="material-symbols-outlined">call</span><span dir="ltr">{{ original.phone }}</span></div>
+                <div class="studio-fact"><span class="material-symbols-outlined">local_shipping</span><span>توصيل للعنوان</span></div>
+            </div>
+        </section>
+        <section class="studio-card">
+            <h2><span class="material-symbols-outlined">payments</span> الدفع</h2>
+            <div class="studio-facts">
+                <div class="studio-fact"><span>طريقة الدفع</span><strong>الدفع عند الاستلام</strong></div>
+                <div class="studio-fact">
+                    <span>حالة التحصيل</span>
+                    {% if original.status == "delivered" or original.status == "paid" %}
+                    <span class="studio-pill">تم التحصيل</span>
+                    {% elif original.status == "cancelled" %}
+                    <span class="studio-pill studio-pill--red">ملغي</span>
+                    {% else %}
+                    <span class="studio-pill studio-pill--amber">في انتظار التحصيل</span>
+                    {% endif %}
+                </div>
+                <div class="studio-fact"><span>تاريخ الطلب</span><strong>{{ original.created_at|date:"j F Y، g:i A" }}</strong></div>
+                <div class="studio-fact"><span>رقم الطلب</span><strong dir="ltr">#{{ original.pk }}</strong></div>
+            </div>
+        </section>
+        <section class="studio-card">
+            <div class="studio-card-head">
+                <h2><span class="material-symbols-outlined">schedule</span> مسار الطلب</h2>
+                {% if original.status == "delivered" or original.status == "paid" %}
+                <span class="studio-pill">تم التسليم</span>
+                {% elif original.status == "cancelled" %}
+                <span class="studio-pill studio-pill--red">ملغي</span>
+                {% elif original.status == "shipped" %}
+                <span class="studio-pill studio-pill--blue">خرج للتوصيل</span>
+                {% elif original.status == "preparing" %}
+                <span class="studio-pill studio-pill--rose">جاري التجهيز</span>
+                {% else %}
+                <span class="studio-pill studio-pill--amber">مؤكد</span>
+                {% endif %}
+            </div>
+            <div class="studio-steps">
+                {% for step in order_steps %}
+                <div class="studio-step {% if step.done %}is-done{% endif %}">
+                    <i></i>
+                    <span>
+                        {{ step.label }}
+                        {% if step.at %}<small class="studio-muted">{{ step.at|date:"j F Y، g:i A" }}</small>{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% if original.status != "delivered" and original.status != "paid" and original.status != "cancelled" %}
+            <form method="post" action="{% url 'admin:brandat_egy_order_step' original.pk 'cancel' %}" style="margin-top: 14px;">
+                {% csrf_token %}
+                <button class="studio-btn-ghost" type="submit" data-testid="order-cancel-{{ original.pk }}" onclick="return confirm('{{ cancel_confirm|escapejs }}')">إلغاء الطلب وإرجاع القطع</button>
+            </form>
+            {% endif %}
+        </section>
+    </div>
+</section>
+{% endblock %}

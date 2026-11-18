@@ -1,0 +1,52 @@
+{% load i18n %}
+
+{% if errors %}
+    <div class="errornote shop-errornote{% if class %} {{ class }}{% endif %}">
+        {% if adminform %}
+            {% for field in adminform.form %}
+                {% for message in field.errors %}
+                    <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span><b>{{ field.label }}:</b> {{ message }}</span></p>
+                {% endfor %}
+            {% endfor %}
+            {% for message in adminform.form.non_field_errors %}
+                <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span>{{ message }}</span></p>
+            {% endfor %}
+        {% endif %}
+
+        {% for inline_admin_formset in inline_admin_formsets %}
+            {% for form in inline_admin_formset.formset %}
+                {% for field in form %}
+                    {% for message in field.errors %}
+                        <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span><b>{{ inline_admin_formset.opts.verbose_name }} — {{ field.label }}:</b> {{ message }}</span></p>
+                    {% endfor %}
+                {% endfor %}
+                {% for message in form.non_field_errors %}
+                    <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span><b>{{ inline_admin_formset.opts.verbose_name }}:</b> {{ message }}</span></p>
+                {% endfor %}
+            {% endfor %}
+            {% for message in inline_admin_formset.formset.non_form_errors %}
+                <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span><b>{{ inline_admin_formset.opts.verbose_name_plural }}:</b> {{ message }}</span></p>
+            {% endfor %}
+        {% endfor %}
+
+        {% if not adminform %}
+            {% if errors.items %}
+                {% for field, field_errors in errors.items %}
+                    {% for message in field_errors %}
+                        <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span>{% if field != "__all__" %}<b>{{ field }}:</b> {% endif %}{{ message }}</span></p>
+                    {% endfor %}
+                {% endfor %}
+            {% else %}
+                {% for item in errors %}
+                    {% if item.error_class %}
+                        {% for line in item %}
+                            <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span>{{ line }}</span></p>
+                        {% endfor %}
+                    {% else %}
+                        <p class="shop-error-line"><span class="material-symbols-outlined">warning</span><span>{{ item }}</span></p>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+    </div>
+{% endif %}

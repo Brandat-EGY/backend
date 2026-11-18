@@ -1,5 +1,9 @@
-from .models import ProductVariant, Box
+from collections import defaultdict
 from decimal import Decimal
+
+from django.db.models import Prefetch
+
+from .models import Box, BoxItem, ProductVariant
 
 
 class Cart:
@@ -61,6 +65,8 @@ class Cart:
                 "Requested quantity exceeds available stock"
             )
 
+        self._ensure_combined_stock(item_key, new_quantity)
+
         self.cart[item_key] = {"quantity": new_quantity}
         self.save()
 
@@ -87,9 +93,97 @@ class Cart:
                 "Requested quantity exceeds available stock"
             )
 
+        self._ensure_combined_stock(item_key, quantity)
+
         self.cart[item_key] = {"quantity": quantity}
         self.save()
 
+
+    def _ensure_combined_stock(self, item_key, quantity):
+        proposed = {
+            key: saved["quantity"]
+            for key, saved in self.cart.items()
+        }
+        proposed[item_key] = quantity
+
+        variant_ids = []
+        box_ids = []
+
+        for key in proposed:
+            kind, raw_id = key.split(":", 1)
+
+            if kind == "variant":
+                variant_ids.append(int(raw_id))
+            elif kind == "box":
+                box_ids.append(int(raw_id))
+            else:
+                raise ValueError("Unsupported cart item")
+
+        boxes = {
+            box.pk: box
+            for box in Box.objects.filter(pk__in=box_ids).prefetch_related(
+                Prefetch(
+                    "items",
+                    queryset=BoxItem.objects.select_related(
+                        "variant__product"
+                    ),
+                )
+            )
+        }
+
+        variant_need = defaultdict(int)
+
+        for key, line_quantity in proposed.items():
+            kind, raw_id = key.split(":", 1)
+            item_id = int(raw_id)
+
+            if kind == "variant":
+                variant_need[item_id] += line_quantity
+                continue
+
+            box = boxes.get(item_id)
+
+            if box is None:
+                raise ValueError("An item in your cart no longer exists")
+
+            if not box.is_active or line_quantity > box.stock:
+                raise ValueError(
+                    "Requested quantity exceeds available stock"
+                )
+
+            box_items = list(box.items.all())
+
+            if not box_items:
+                raise ValueError(
+                    "Requested quantity exceeds available stock"
+                )
+
+            for box_item in box_items:
+                variant_need[box_item.variant_id] += (
+                    box_item.quantity * line_quantity
+                )
+
+        variants = {
+            variant.pk: variant
+            for variant in ProductVariant.objects.select_related(
+                "product"
+            ).filter(pk__in=variant_need)
+        }
+
+        for variant_id, needed in variant_need.items():
+            variant = variants.get(variant_id)
+
+            if variant is None:
+                raise ValueError("An item in your cart no longer exists")
+
+            if (
+                not variant.is_active
+                or not variant.product.is_available
+                or needed > variant.stock
+            ):
+                raise ValueError(
+                    "Requested quantity exceeds available stock"
+                )
 
     def remove(self, item):
         item_key = self._get_item_key(item)

@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="shipping-page">
+    <div class="studio-head">
+        <div>
+            <h1>مصاريف الشحن</h1>
+            <p>حدد مصاريف كل محافظة. المصاريف بتتضاف على إجمالي الطلب.</p>
+        </div>
+    </div>
+    <form class="studio-card" method="post" data-testid="shipping-form">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        {{ formset.non_form_errors }}
+        <div class="studio-table-wrap">
+            <table class="studio-table">
+                <thead>
+                    <tr>
+                        <th>المحافظة</th>
+                        <th>مصاريف الشحن</th>
+                        <th>ظاهرة في الطلب</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for form in formset %}
+                    <tr>
+                        <td>
+                            {{ form.id }}
+                            {{ form.name_ar }}
+                            {{ form.name_ar.errors }}
+                        </td>
+                        <td>
+                            {{ form.fee }}
+                            {{ form.fee.errors }}
+                        </td>
+                        <td>
+                            <label class="studio-check">
+                                {{ form.is_active }}
+                                ظاهرة
+                            </label>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="studio-actions" style="margin-top: 16px;">
+            <button class="studio-btn-primary" type="submit" data-testid="shipping-save">احفظ المصاريف</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

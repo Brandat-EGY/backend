@@ -1,0 +1,271 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block bodyclass %}{{ block.super }} shop-is-home{% endblock %}
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<div class="shop-home" data-testid="store-home">
+    <header class="shop-welcome">
+        <div>
+            <h1>{% trans "Welcome back" %}، {{ request.user.customer_name|default:request.user.phone }} 👋</h1>
+            <p>{% trans "Here's what is happening in the store today." %}</p>
+        </div>
+        {% if can_view_orders %}
+        <details class="shop-range">
+            <summary data-testid="dashboard-range">
+                <span class="material-symbols-outlined">calendar_today</span>
+                {{ range_label }}
+                <span class="material-symbols-outlined">expand_more</span>
+            </summary>
+            <div>
+                <a href="?period=today" data-testid="dashboard-period-today" {% if selected_sales_period == "today" %}class="is-active"{% endif %}>{% trans "Today" %}</a>
+                <a href="?period=yesterday" data-testid="dashboard-period-yesterday" {% if selected_sales_period == "yesterday" %}class="is-active"{% endif %}>{% trans "Yesterday" %}</a>
+                <form method="get" class="shop-range-custom" data-testid="dashboard-period-custom">
+                    <input type="hidden" name="period" value="custom">
+                    <label>{% trans "From" %} <input type="date" name="start" value="{{ range_start|date:'Y-m-d' }}" data-testid="dashboard-range-start"></label>
+                    <label>{% trans "To" %} <input type="date" name="end" value="{{ range_end|date:'Y-m-d' }}" data-testid="dashboard-range-end"></label>
+                    <button type="submit" data-testid="dashboard-range-apply">{% trans "Custom" %}</button>
+                </form>
+            </div>
+        </details>
+        {% endif %}
+    </header>
+
+    {% if can_view_orders %}
+    <section class="shop-kpis">
+        <a class="shop-kpi" data-testid="dashboard-period-sales" href="{% url 'admin:brandat_egy_order_changelist' %}?status__exact=delivered">
+            <div>
+                <span>{% trans "Total revenue" %}</span>
+                <strong>{{ revenue_display }} {% trans "EGP" %}</strong>
+                {% include "admin/brandat_egy/change_pill.html" with change=home.revenue_change %}
+            </div>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 34V18M16 34V12M24 34V22M32 34V8M40 34V16" fill="none" stroke="#F43F5E" stroke-width="3" stroke-linecap="round"/></svg>
+        </a>
+        <a class="shop-kpi" data-testid="dashboard-orders" href="{% url 'admin:brandat_egy_order_changelist' %}">
+            <div>
+                <span>{% trans "Total orders" %}</span>
+                <strong>{{ home.orders_total }}</strong>
+                {% include "admin/brandat_egy/change_pill.html" with change=home.orders_change %}
+            </div>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 16h28l-3 18H13L10 16zM18 16l2-6h8l2 6" fill="none" stroke="#F43F5E" stroke-width="2.4" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="shop-kpi" data-testid="dashboard-customers" href="{% url 'admin:accounts_user_changelist' %}">
+            <div>
+                <span>{% trans "New customers" %}</span>
+                <strong>{{ home.customers_new }}</strong>
+                {% include "admin/brandat_egy/change_pill.html" with change=home.customers_change %}
+            </div>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="18" r="6" fill="none" stroke="#F43F5E" stroke-width="2.4"/><path d="M12 36c2-6 8-9 12-9s10 3 12 9" fill="none" stroke="#F43F5E" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </a>
+        <a class="shop-kpi" data-testid="dashboard-aov" href="{% url 'admin:brandat_egy_order_changelist' %}?status__exact=delivered">
+            <div>
+                <span>{% trans "Average order" %}</span>
+                <strong>{{ home.aov_display }} {% trans "EGP" %}</strong>
+                {% include "admin/brandat_egy/change_pill.html" with change=home.aov_change %}
+            </div>
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 32l10-10 6 6 16-16" fill="none" stroke="#F43F5E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 12h10v10" fill="none" stroke="#F43F5E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+    </section>
+
+    <section class="shop-charts">
+        <article class="shop-card" id="shop-sales">
+            <div class="shop-card-head">
+                <h2>{% trans "Sales overview" %}</h2>
+                <details class="shop-range shop-range--small">
+                    <summary data-testid="dashboard-chart-period">
+                        {{ range_label }}
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </summary>
+                    <div>
+                        <a href="?period=today" {% if selected_sales_period == "today" %}class="is-active"{% endif %}>{% trans "Today" %}</a>
+                        <a href="?period=yesterday" {% if selected_sales_period == "yesterday" %}class="is-active"{% endif %}>{% trans "Yesterday" %}</a>
+                        <a href="?period=custom&start={{ range_start|date:'Y-m-d' }}&end={{ range_end|date:'Y-m-d' }}" {% if selected_sales_period == "custom" %}class="is-active"{% endif %}>{% trans "Custom" %}</a>
+                    </div>
+                </details>
+            </div>
+            <div class="shop-chart">
+                <canvas id="shop-sales-chart" data-testid="dashboard-sales-chart"></canvas>
+            </div>
+        </article>
+
+        <article class="shop-card">
+            <div class="shop-card-head">
+                <h2>{% trans "Order statuses" %}</h2>
+            </div>
+            <div class="shop-status">
+                <div class="shop-donut">
+                    <canvas id="shop-status-chart" data-testid="dashboard-status-chart"></canvas>
+                    <div class="shop-donut-center">
+                        <strong>{{ order_status_total }}</strong>
+                        <span>{% trans "Orders" %}</span>
+                    </div>
+                </div>
+                <ul class="shop-legend">
+                    {% for item in status_legend %}
+                    <li>
+                        <a data-testid="dashboard-status-{{ item.code }}" href="{% url 'admin:brandat_egy_order_changelist' %}?status__exact={{ item.code }}">
+                            <i style="background: {{ item.color }}"></i>
+                            {{ item.label }}
+                            <b>{{ item.percent }}%</b>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </article>
+    </section>
+
+    <section class="shop-bottom">
+        <article class="shop-card">
+            <div class="shop-card-head">
+                <h2>{% trans "Top selling products" %}</h2>
+                <a href="{% url 'admin:brandat_egy_product_changelist' %}">{% trans "View All" %}</a>
+            </div>
+            <table class="shop-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>{% trans "Product" %}</th>
+                        <th>{% trans "Sales" %}</th>
+                        <th>{% trans "Revenue" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in top_products %}
+                    <tr>
+                        <td class="shop-muted shop-row-index">{{ forloop.counter }}</td>
+                        <td data-label="{% trans 'Product' %}">
+                            <a class="shop-person" href="{{ product.url }}">
+                                {% if product.image_url %}
+                                <img src="{{ product.image_url }}" alt="">
+                                {% else %}
+                                <span class="shop-thumb">{{ product.letter }}</span>
+                                {% endif %}
+                                <span>{{ product.name }}</span>
+                            </a>
+                        </td>
+                        <td data-label="{% trans 'Sales' %}">{{ product.sold }}</td>
+                        <td data-label="{% trans 'Revenue' %}">{{ product.revenue }} {% trans "EGP" %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="shop-muted">{% trans "No delivered sales in this period" %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </article>
+
+        <article class="shop-card">
+            <div class="shop-card-head">
+                <h2>{% trans "Recent orders" %}</h2>
+                <a data-testid="dashboard-view-orders" href="{% url 'admin:brandat_egy_order_changelist' %}">{% trans "View All" %}</a>
+            </div>
+            <table class="shop-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>{% trans "Order number" %}</th>
+                        <th>{% trans "Customer" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Total" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td class="shop-muted shop-row-index">{{ forloop.counter }}</td>
+                        <td data-label="{% trans 'Order number' %}"><a data-testid="dashboard-order-{{ order.pk }}" href="{% url 'admin:brandat_egy_order_change' order.pk %}">#{{ order.pk }}</a></td>
+                        <td data-label="{% trans 'Customer' %}">{{ order.customer_name }}</td>
+                        <td data-label="{% trans 'Status' %}">
+                            {% if order.status == "delivered" %}
+                            <span class="shop-badge shop-badge--green">{% trans "Delivered" %}</span>
+                            {% elif order.status == "confirmed" or order.status == "pending" %}
+                            <span class="shop-badge shop-badge--amber">{% trans "Confirmed" %}</span>
+                            {% elif order.status == "preparing" %}
+                            <span class="shop-badge shop-badge--rose">{% trans "Preparing" %}</span>
+                            {% elif order.status == "shipped" %}
+                            <span class="shop-badge shop-badge--blue">{% trans "Shipped" %}</span>
+                            {% elif order.status == "cancelled" %}
+                            <span class="shop-badge shop-badge--red">{% trans "Cancelled" %}</span>
+                            {% else %}
+                            <span class="shop-badge">{{ order.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="{% trans 'Total' %}">{{ order.total_price|floatformat:0 }} {% trans "EGP" %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="shop-muted">{% trans "No orders yet." %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </article>
+    </section>
+
+    {{ sales_labels|json_script:"shop-sales-labels" }}
+    {{ sales_values|json_script:"shop-sales-values" }}
+    {{ status_legend|json_script:"shop-status-legend" }}
+    <script>
+    (function () {
+        if (!window.Chart) return;
+        var labels = JSON.parse(document.getElementById("shop-sales-labels").textContent);
+        var values = JSON.parse(document.getElementById("shop-sales-values").textContent);
+        var legend = JSON.parse(document.getElementById("shop-status-legend").textContent);
+        var sales = document.getElementById("shop-sales-chart");
+        var status = document.getElementById("shop-status-chart");
+        if (sales) {
+            new Chart(sales, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        borderColor: "#E11D48",
+                        backgroundColor: "rgba(225, 29, 72, 0.12)",
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: "#9CA3AF", maxTicksLimit: window.matchMedia("(max-width: 700px)").matches ? 4 : 7, font: { size: 11 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: "#F3F4F6" },
+                            ticks: { color: "#9CA3AF", font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+        if (status) {
+            new Chart(status, {
+                type: "doughnut",
+                data: {
+                    labels: legend.map(function (item) { return item.label; }),
+                    datasets: [{
+                        data: legend.map(function (item) { return item.count; }),
+                        backgroundColor: legend.map(function (item) { return item.color; }),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "68%",
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    })();
+    </script>
+    {% endif %}
+</div>
+{% endblock %}

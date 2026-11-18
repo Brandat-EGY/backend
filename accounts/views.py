@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.middleware.csrf import get_token
 
 
 from rest_framework.views import APIView
@@ -15,16 +16,18 @@ from rest_framework.permissions import IsAuthenticated
 from brandat_egy.favorites import Favorites
 from .serializers import RegisterSerializer ,LoginSerializer, CustomerProfileSerializer
 
+
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CSRFTokenAPIView(APIView):
-    authentication_classes = []
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response({
-            "message": "CSRF cookie set successfully."
-        })
+        csrf_token = get_token(request)
 
+        return Response({
+            "message": "CSRF token generated successfully.",
+            "csrf_token": csrf_token,
+        })
 
 class RegisterAPIView(APIView):
     authentication_classes = []

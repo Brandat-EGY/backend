@@ -9,10 +9,13 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-
+from django.utils.translation import gettext_lazy as _
+from django.urls import reverse_lazy
+from django.templatetags.static import static
 from pathlib import Path
 import os
 from datetime import timedelta
+from corsheaders.defaults import default_headers
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -29,12 +32,18 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
 # DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "batboy-easiness-comfy.ngrok-free.dev",
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "unfold",
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,14 +52,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
-
+    "corsheaders",
     "brandat_egy",
     "accounts",
+    
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "django.middleware.locale.LocaleMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -63,7 +75,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -97,8 +109,37 @@ SIMPLE_JWT = {
 }
 
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    "ngrok-skip-browser-warning",
+)
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://batboy-easiness-comfy.ngrok-free.dev",
+]
+
+
 
 WSGI_APPLICATION = 'core.wsgi.application'
+
+
+# Cross-site cookies for HTTPS development
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
+
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = True
+
+CORS_ALLOW_CREDENTIALS = True
+
 
 
 # Database
@@ -143,19 +184,29 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "Africa/Cairo"
+USE_TZ = True
+
+LANGUAGE_CODE = "ar"
 
 USE_I18N = True
 
-USE_TZ = True
+LANGUAGES = [
+    ("ar", _("Arabic")),
+    ("en", _("English")),
+]
+
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -172,3 +223,136 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+UNFOLD = {
+    # Brand identity
+    "SITE_TITLE": "Brandat Egy Admin",
+    "SITE_HEADER": "Brandat Egy",
+    "SITE_SUBHEADER": _("Store Management"),
+    "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
+
+    # Language switcher
+    "SHOW_LANGUAGES": True,
+
+    # Modern rounded interface
+    "BORDER_RADIUS": "10px",
+
+    # Brandat Egy color system
+    "COLORS": {
+        "primary": {
+            "50": "#FAF0F3",
+            "100": "#F4DDE5",
+            "200": "#E8BAC9",
+            "300": "#C3A2AE",
+            "400": "#AD637A",
+            "500": "#882D46",
+            "600": "#5F091D",
+            "700": "#4C0B1E",
+            "800": "#3B0C1B",
+            "900": "#2A0917",
+            "950": "#1B0710",
+        },
+
+        "base": {
+            "50": "#FAF7F3",
+            "100": "#F4EFF0",
+            "200": "#E5DFE1",
+            "300": "#D4CBCF",
+            "400": "#B9ADB2",
+            "500": "#94868C",
+            "600": "#74696D",
+            "700": "#594F52",
+            "800": "#40383A",
+            "900": "#2A2223",
+            "950": "#131212",
+        },
+    },
+
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+
+        "navigation": [
+            {
+                "separator": False,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": _("Orders"),
+                        "icon": "shopping_bag",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_order_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Products"),
+                        "icon": "inventory_2",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_product_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Categories"),
+                        "icon": "category",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_category_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Brands"),
+                        "icon": "sell",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_brand_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Boxes"),
+                        "icon": "redeem",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_box_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Customers"),
+                        "icon": "group",
+                        "link": reverse_lazy(
+                            "admin:accounts_user_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Daily Offers"),
+                        "icon": "local_offer",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_dailyoffer_changelist"
+                        ),
+                    },
+                    {
+                        "title": _("Reviews"),
+                        "icon": "star",
+                        "link": reverse_lazy(
+                            "admin:brandat_egy_review_changelist"
+                        ),
+                    },
+                ],
+            },
+        ],
+    },
+
+    "STYLES": [
+        lambda request: static(
+            "brandat_egy/css/admin.css"
+        ),
+        lambda request: static(
+            "brandat_egy/css/shell.css"
+        ),
+    ],
+}
+
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]

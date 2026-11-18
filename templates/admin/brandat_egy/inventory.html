@@ -1,0 +1,134 @@
+{% extends "admin/base.html" %}
+{% load admin_ui %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="inventory-page">
+    <div class="studio-head">
+        <div>
+            <h1>المخزون</h1>
+            <p>كمية كل خيار منتج في المتجر</p>
+        </div>
+        <div class="studio-actions">
+            <a class="studio-btn" data-testid="inventory-export" href="?{{ request.GET.urlencode }}{% if request.GET %}&{% endif %}export=1">
+                <span class="material-symbols-outlined">download</span>
+                تصدير المخزون
+            </a>
+            <a class="studio-btn-primary" data-testid="inventory-add" href="{% url 'admin:brandat_egy_product_add' %}">
+                <span class="material-symbols-outlined">add</span>
+                أضف منتج
+            </a>
+        </div>
+    </div>
+
+    <div class="studio-kpis">
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon"><span class="material-symbols-outlined">inventory_2</span></span>
+            <strong>{{ stats.total }}</strong>
+            <span class="studio-muted">كل الأكواد</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon studio-kpi-icon--amber"><span class="material-symbols-outlined">warning</span></span>
+            <strong>{{ stats.low }}</strong>
+            <span class="studio-muted">على وشك النفاد</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon studio-kpi-icon--amber"><span class="material-symbols-outlined">block</span></span>
+            <strong>{{ stats.out }}</strong>
+            <span class="studio-muted">نفد</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <span class="studio-kpi-icon studio-kpi-icon--green"><span class="material-symbols-outlined">payments</span></span>
+            <strong>{{ stats.value|floatformat:0 }} ج.م</strong>
+            <span class="studio-muted">قيمة المخزون بسعر البيع</span>
+        </article>
+    </div>
+
+    <nav class="studio-tabs">
+        <a class="{% if stock_tab == 'all' %}is-active{% endif %}" href="?stock=all&q={{ query }}&category={{ category_id }}" data-testid="inventory-tab-all">كل المخزون</a>
+        <a class="{% if stock_tab == 'low' %}is-active{% endif %}" href="?stock=low&q={{ query }}&category={{ category_id }}" data-testid="inventory-tab-low">على وشك النفاد</a>
+        <a class="{% if stock_tab == 'out' %}is-active{% endif %}" href="?stock=out&q={{ query }}&category={{ category_id }}" data-testid="inventory-tab-out">نفد</a>
+    </nav>
+
+    <div class="studio-toolbar">
+        <form method="get">
+            <input type="hidden" name="stock" value="{{ stock_tab }}">
+            <input type="search" name="q" value="{{ query }}" placeholder="ابحث بالمنتج أو الكود..." data-testid="inventory-search">
+            <select name="category" aria-label="التصنيف" data-testid="inventory-category">
+                <option value="">كل التصنيفات</option>
+                {% for category in categories %}
+                <option value="{{ category.pk }}" {% if category_id == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name_ar }}</option>
+                {% endfor %}
+            </select>
+            <button class="studio-btn-primary" type="submit" data-testid="inventory-filter">تصفية</button>
+        </form>
+    </div>
+
+    <section class="studio-card">
+        <div class="studio-table-wrap">
+            <table class="studio-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>المنتج</th>
+                        <th>الكود</th>
+                        <th>الكمية</th>
+                        <th>السعر</th>
+                        <th>آخر تحديث</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for variant in page %}
+                    <tr data-testid="inventory-row-{{ variant.pk }}">
+                        <td class="studio-muted">{{ page.start_index|add:forloop.counter0 }}</td>
+                        <td>
+                            <a class="studio-product" href="{% url 'admin:brandat_egy_product_change' variant.product_id %}">
+                                {% with photo=variant.product.images.all|first %}
+                                {% if photo %}<img src="{{ photo.image.url }}" alt="">{% else %}<span class="studio-thumb">{{ variant.product.name_ar|slice:":1" }}</span>{% endif %}
+                                {% endwith %}
+                                <span>{{ variant.product.name_ar }}<small>{{ variant.size }}</small></span>
+                            </a>
+                        </td>
+                        <td dir="ltr">{{ variant.sku }}</td>
+                        <td>{{ variant.stock }}</td>
+                        <td>{{ variant.price|floatformat:0 }} ج.م</td>
+                        <td>{{ variant.updated_at|date:"j M Y، g:i A" }}</td>
+                        <td>
+                            {% if variant.stock == 0 %}
+                            <span class="studio-pill studio-pill--red">نفد</span>
+                            {% elif variant.stock <= low_stock %}
+                            <span class="studio-pill studio-pill--amber">على وشك النفاد</span>
+                            {% else %}
+                            <span class="studio-pill">متوفر</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a class="studio-btn" href="{% url 'admin:brandat_egy_product_change' variant.product_id %}" aria-label="تعديل المنتج" data-testid="inventory-edit-{{ variant.pk }}">
+                                <span class="material-symbols-outlined">edit</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="studio-muted">لا يوجد مخزون مطابق.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="studio-pager">
+            <span>عرض {{ page.start_index }}–{{ page.end_index }} من {{ page.paginator.count }}</span>
+            <span class="studio-inline-actions">
+                {% if page.has_previous %}
+                <a class="studio-btn" href="{% page_query request page.previous_page_number %}" data-testid="inventory-prev">السابق</a>
+                {% endif %}
+                <span class="studio-btn-primary">{{ page.number }}</span>
+                {% if page.has_next %}
+                <a class="studio-btn" href="{% page_query request page.next_page_number %}" data-testid="inventory-next">التالي</a>
+                {% endif %}
+            </span>
+        </div>
+    </section>
+</section>
+{% endblock %}

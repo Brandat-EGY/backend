@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="staff-page">
+    <div class="studio-head">
+        <div>
+            <h1>الموظفون</h1>
+            <p>يقدر يتابع الطلبات ويغيّر حالتها، ويضيف المنتجات والبوكسات. الدخول برقم الهاتف.</p>
+        </div>
+        <a class="studio-btn-primary" href="{% url 'admin:accounts_staff_add' %}" data-testid="staff-add">أضف موظف</a>
+    </div>
+    <section class="studio-card">
+        <div class="studio-table-wrap">
+            <table class="studio-table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الهاتف</th>
+                        <th>الدور</th>
+                        <th>الدخول</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person in staff %}
+                    <tr>
+                        <td><a href="{% url 'admin:accounts_staff_change' person.pk %}" data-testid="staff-row-{{ person.pk }}">{{ person.customer_name }}</a></td>
+                        <td dir="ltr">{{ person.phone }}</td>
+                        <td>{% if person.is_superuser %}مدير عام{% else %}موظف المتجر{% endif %}</td>
+                        <td>{% if person.is_active %}نشط{% else %}متوقف{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="studio-muted">لا يوجد موظفون بعد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+{% endblock %}

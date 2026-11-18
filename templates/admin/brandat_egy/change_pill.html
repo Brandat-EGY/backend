@@ -1,0 +1,5 @@
+{% if change or change == 0 %}
+<span class="shop-delta {% if change < 0 %}is-down{% else %}is-up{% endif %}">
+    {% if change < 0 %}↓{% else %}↑{% endif %} {{ change }}%
+</span>
+{% endif %}

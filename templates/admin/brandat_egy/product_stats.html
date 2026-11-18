@@ -1,0 +1,19 @@
+{% load i18n %}
+<section class="brandat-list-stats" data-testid="product-stats">
+    <div>
+        <span>{% trans "Visible products" %}</span>
+        <strong>{{ product_stats.active }}</strong>
+    </div>
+    <div>
+        <span>{% trans "All products" %}</span>
+        <strong>{{ product_stats.total }}</strong>
+    </div>
+    <div>
+        <span>{% trans "Running low" %}</span>
+        <strong>{{ product_stats.low }}</strong>
+    </div>
+    <div>
+        <span>{% trans "Pieces sold" %}</span>
+        <strong>{{ product_stats.sold }}</strong>
+    </div>
+</section>

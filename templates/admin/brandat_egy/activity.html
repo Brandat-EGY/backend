@@ -1,0 +1,110 @@
+{% extends "admin/base.html" %}
+{% load admin_ui %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="activity-page">
+    <div class="studio-head">
+        <div>
+            <h1>سجل النشاط</h1>
+            <p>تابع تعديلات لوحة المتجر: مين عمل إيه وامتى</p>
+        </div>
+        <a class="studio-btn" data-testid="activity-clear" href="{% url 'admin:brandat_activity' %}">امسح التصفية</a>
+    </div>
+
+    <section class="studio-card">
+        <h2><span class="material-symbols-outlined">filter_alt</span> التصفية</h2>
+        <form class="studio-fields" method="get" style="margin-top: 14px;">
+            <div class="studio-field">
+                <label for="activity-module">القسم</label>
+                <select id="activity-module" name="module" data-testid="activity-module">
+                    <option value="">كل الأقسام</option>
+                    {% for module in modules %}
+                    <option value="{{ module.id }}" {% if request.GET.module == module.id|stringformat:"s" %}selected{% endif %}>{{ module.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="studio-field">
+                <label for="activity-user">المستخدمة</label>
+                <select id="activity-user" name="user" data-testid="activity-user">
+                    <option value="">كل المستخدمات</option>
+                    {% for person in people %}
+                    <option value="{{ person.pk }}" {% if request.GET.user == person.pk|stringformat:"s" %}selected{% endif %}>{{ person.customer_name|default:person.phone }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="studio-field">
+                <label for="activity-action">نوع الإجراء</label>
+                <select id="activity-action" name="action" data-testid="activity-action">
+                    <option value="">كل الإجراءات</option>
+                    <option value="1" {% if request.GET.action == "1" %}selected{% endif %}>إضافة</option>
+                    <option value="2" {% if request.GET.action == "2" %}selected{% endif %}>تعديل</option>
+                    <option value="3" {% if request.GET.action == "3" %}selected{% endif %}>حذف</option>
+                </select>
+            </div>
+            <div class="studio-field" style="justify-content: flex-end;">
+                <button class="studio-btn-primary" type="submit" data-testid="activity-apply">طبّقي التصفية</button>
+            </div>
+        </form>
+    </section>
+
+    <div class="studio-toolbar">
+        <form method="get">
+            <input type="hidden" name="module" value="{{ request.GET.module }}">
+            <input type="hidden" name="user" value="{{ request.GET.user }}">
+            <input type="hidden" name="action" value="{{ request.GET.action }}">
+            <input type="search" name="q" value="{{ query }}" placeholder="ابحث في السجل..." data-testid="activity-search">
+            <button class="studio-btn-primary" type="submit">بحث</button>
+        </form>
+    </div>
+
+    <section class="studio-card">
+        <div class="studio-table-wrap">
+            <table class="studio-table">
+                <thead>
+                    <tr>
+                        <th>المستخدمة</th>
+                        <th>الإجراء</th>
+                        <th>القسم</th>
+                        <th>التفاصيل</th>
+                        <th>التاريخ</th>
+                        <th>الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page %}
+                    <tr data-testid="activity-row-{{ row.entry.pk }}">
+                        <td>
+                            <div class="studio-product">
+                                <span class="studio-thumb">{{ row.user_name|slice:":1" }}</span>
+                                <span>{{ row.user_name }}<small>{{ row.role }}</small></span>
+                            </div>
+                        </td>
+                        <td><span class="studio-pill {{ row.pill }}">{{ row.action }}</span></td>
+                        <td>{{ row.module }}</td>
+                        <td>{{ row.detail }}</td>
+                        <td>{{ row.entry.action_time|date:"j M Y" }}</td>
+                        <td>{{ row.entry.action_time|date:"g:i A" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="studio-muted">لا توجد حركات مطابقة.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="studio-pager">
+            <span>عرض {{ page.start_index }}–{{ page.end_index }} من {{ page.paginator.count }}</span>
+            <span class="studio-inline-actions">
+                {% if page.has_previous %}
+                <a class="studio-btn" href="{% page_query request page.previous_page_number %}" data-testid="activity-prev">السابق</a>
+                {% endif %}
+                <span class="studio-btn-primary">{{ page.number }}</span>
+                {% if page.has_next %}
+                <a class="studio-btn" href="{% page_query request page.next_page_number %}" data-testid="activity-next">التالي</a>
+                {% endif %}
+            </span>
+        </div>
+    </section>
+</section>
+{% endblock %}

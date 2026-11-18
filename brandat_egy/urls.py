@@ -28,15 +28,34 @@ from .views import (
     CartItemAddAPIView,
     CartItemDetailAPIView,
     CheckoutAPIView,
+    ShippingRateListAPIView,
     CustomerOrderListAPIView,
     CustomerOrderDetailAPIView,
     ReviewListAPIView,
+    BoxReviewListAPIView,
     AdminOrderListAPIView,
     AdminOrderDetailAPIView,
     AdminOrderStatusAPIView,
     AdminOrderCancelAPIView,
+    AdminCategoryListCreateAPIView,
+    AdminCategoryDetailAPIView,
+    AdminBoxListCreateAPIView,
+    AdminBoxDetailAPIView,
+    AdminBoxItemCreateAPIView,
+    AdminBoxItemDetailAPIView,
+    AdminBoxImageCreateAPIView,
+    AdminBoxImageSetMainAPIView,
+    AdminBoxImageDeleteAPIView,
+    AdminBoxPublishAPIView,
+    AdminBoxUnpublishAPIView,
+    AdminCollectionListCreateAPIView,
+    AdminCollectionDetailAPIView,
+    AdminCollectionBoxAddAPIView,
+    AdminCollectionBoxRemoveAPIView,
+    AdminCollectionPublishAPIView,
+    AdminCollectionUnpublishAPIView,
 
-    
+
 )
 
 
@@ -55,10 +74,12 @@ urlpatterns = [
     path("cart/",CartDetailAPIView.as_view(),name="cart-detail",),
     path("cart/items/",CartItemAddAPIView.as_view(),name="cart-item-add",),
     path("cart/items/<str:item_key>/",CartItemDetailAPIView.as_view(),name="cart-item-detail",),
+    path("shipping-rates/",ShippingRateListAPIView.as_view(),name="shipping-rate-list",),
     path("checkout/",CheckoutAPIView.as_view(),name="checkout",),
     path("orders/",CustomerOrderListAPIView.as_view(),name="customer-order-list",),
     path("orders/<int:order_id>/",CustomerOrderDetailAPIView.as_view(),name="customer-order-detail",),
     path("products/<int:product_id>/reviews/",ReviewListAPIView.as_view(),name="product-reviews",),
+    path("boxes/<int:box_id>/reviews/",BoxReviewListAPIView.as_view(),name="box-reviews",),
 
     path("admin/products/",AdminProductCreateAPIView.as_view(),name="admin-product-create",),
     path("admin/products/<int:product_id>/variants/",AdminProductVariantCreateAPIView.as_view(),name="admin-product-variant-create",),
@@ -79,5 +100,28 @@ urlpatterns = [
     path("admin/orders/<int:order_id>/",AdminOrderDetailAPIView.as_view(),name="admin-order-detail",),
     path("admin/orders/<int:order_id>/status/",AdminOrderStatusAPIView.as_view(),name="admin-order-status",),
     path("admin/orders/<int:order_id>/cancel/",AdminOrderCancelAPIView.as_view(),name="admin-order-cancel",),
+
+    path("admin/categories/",AdminCategoryListCreateAPIView.as_view(),name="admin-category-list",),
+    path("admin/categories/<int:category_id>/",AdminCategoryDetailAPIView.as_view(),name="admin-category-detail",),
+
+
+    path("admin/boxes/",AdminBoxListCreateAPIView.as_view(),name="admin-box-list",),
+    path("admin/boxes/<int:box_id>/",AdminBoxDetailAPIView.as_view(),name="admin-box-detail",),
+    path("admin/boxes/<int:box_id>/items/",AdminBoxItemCreateAPIView.as_view(),name="admin-box-item-create",),
+    path("admin/boxes/<int:box_id>/items/<int:item_id>/",AdminBoxItemDetailAPIView.as_view(),name="admin-box-item-detail",),
+    path("admin/boxes/<int:box_id>/images/",AdminBoxImageCreateAPIView.as_view(),name="admin-box-image-create",),
+    path("admin/boxes/<int:box_id>/images/<int:image_id>/main/",AdminBoxImageSetMainAPIView.as_view(),name="admin-box-image-set-main",),
+    path("admin/boxes/<int:box_id>/images/<int:image_id>/",AdminBoxImageDeleteAPIView.as_view(),name="admin-box-image-delete",),
+    path("admin/boxes/<int:box_id>/publish/",AdminBoxPublishAPIView.as_view(),name="admin-box-publish",),
+    path("admin/boxes/<int:box_id>/unpublish/",AdminBoxUnpublishAPIView.as_view(),name="admin-box-unpublish",),
+
+
+
+    path("admin/collections/",AdminCollectionListCreateAPIView.as_view(),name="admin-collection-list",),
+    path("admin/collections/<int:collection_id>/",AdminCollectionDetailAPIView.as_view(),name="admin-collection-detail",),
+    path("admin/collections/<int:collection_id>/boxes/",AdminCollectionBoxAddAPIView.as_view(),name="admin-collection-box-add",),
+    path("admin/collections/<int:collection_id>/boxes/<int:box_id>/",AdminCollectionBoxRemoveAPIView.as_view(),name="admin-collection-box-remove",),
+    path("admin/collections/<int:collection_id>/publish/",AdminCollectionPublishAPIView.as_view(),name="admin-collection-publish",),
+    path("admin/collections/<int:collection_id>/unpublish/",AdminCollectionUnpublishAPIView.as_view(),name="admin-collection-unpublish",),
 
 ]

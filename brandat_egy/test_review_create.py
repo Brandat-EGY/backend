@@ -7,7 +7,9 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from .models import (
+    Box,
     Order,
+    OrderBox,
     OrderItem,
     Product,
     ProductVariant,
@@ -217,3 +219,72 @@ class ReviewCreateAPITests(APITestCase):
             response.data["results"][0]["rating"],
             5,
         )
+
+
+class BoxReviewCreateAPITests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            phone="01055556666",
+            customer_name="Box Buyer",
+            password="SecurePass2026!",
+        )
+        self.product = Product.objects.create(
+            name_ar="سيروم مرطب",
+            description_ar="سيروم للبشرة",
+            is_available=True,
+        )
+        self.variant = ProductVariant.objects.create(
+            product=self.product,
+            price=Decimal("200.00"),
+            stock=10,
+        )
+        self.box = Box.objects.create(
+            name_ar="بوكس العناية",
+            description_ar="بوكس للعناية بالبشرة",
+            sku="BOX-REVIEW-001",
+            price=Decimal("500.00"),
+            stock=4,
+            is_active=True,
+        )
+        self.order = Order.objects.create(
+            user=self.user,
+            customer_name="Box Buyer",
+            phone="01055556666",
+            address="Cairo",
+            status="delivered",
+        )
+        self.order_box = OrderBox.objects.create(
+            order=self.order,
+            box=self.box,
+            name_ar=self.box.name_ar,
+            sku=self.box.sku,
+            quantity=1,
+            price=Decimal("500.00"),
+        )
+        self.url = reverse(
+            "box-reviews",
+            kwargs={"box_id": self.box.pk},
+        )
+
+    def test_customer_can_review_delivered_box(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            self.url,
+            {
+                "order_box_id": self.order_box.pk,
+                "name": "Buyer",
+                "rating": 5,
+                "comment": "Loved the box",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(
+            Review.objects.filter(order_box=self.order_box).exists()
+        )
+
+        listed = self.client.get(self.url)
+        self.assertEqual(listed.data["count"], 1)

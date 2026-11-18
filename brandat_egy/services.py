@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from decimal import Decimal
+
 from django.db import transaction
 from .pricing import get_effective_price
 
@@ -15,10 +17,11 @@ from .models import (
     ProductVariant,
 )
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 
 @transaction.atomic
-def create_order_from_cart(*, cart, customer_name, phone, address, user=None, session_key=None, email="",):
+def create_order_from_cart(*, cart, customer_name, phone, address, user=None, session_key=None, email="", governorate=None,):
     items = list(cart)
 
     if not items:
@@ -138,6 +141,10 @@ def create_order_from_cart(*, cart, customer_name, phone, address, user=None, se
         phone=phone,
         email=email,
         address=address,
+        governorate=governorate,
+        shipping_fee=(
+            governorate.fee if governorate is not None else Decimal("0.00")
+        ),
     )
 
     for item in items:
@@ -201,8 +208,8 @@ def cancel_order(*, order_id):
     if order.stock_restored_at is not None:
         return order
 
-    if order.status != "pending":
-        raise ValueError("Only pending orders can be cancelled")
+    if order.status not in {"pending", "confirmed", "preparing", "shipped"}:
+        raise ValueError(_("This order can no longer be cancelled"))
 
     variant_quantities = defaultdict(int)
     box_quantities = defaultdict(int)
@@ -235,10 +242,10 @@ def cancel_order(*, order_id):
     }
 
     if len(boxes) != len(box_quantities):
-        raise ValueError("An ordered box no longer exists")
+        raise ValueError(_("An ordered box no longer exists"))
 
     if len(variants) != len(variant_quantities):
-        raise ValueError("An ordered variant no longer exists")
+        raise ValueError(_("An ordered variant no longer exists"))
 
     for variant_id, quantity in variant_quantities.items():
         variant = variants[variant_id]
@@ -258,4 +265,26 @@ def cancel_order(*, order_id):
         "updated_at",
     ])
 
+    return order
+
+
+@transaction.atomic
+def advance_order_status(*, order_id, new_status):
+    order = Order.objects.select_for_update().get(pk=order_id)
+
+    if order.status == new_status:
+        return order
+
+    allowed = {
+        "pending": "preparing",
+        "confirmed": "preparing",
+        "preparing": "shipped",
+        "shipped": "delivered",
+    }
+
+    if allowed.get(order.status) != new_status:
+        raise ValueError(_("This order cannot move to that step"))
+
+    order.status = new_status
+    order.save(update_fields=["status", "updated_at"])
     return order

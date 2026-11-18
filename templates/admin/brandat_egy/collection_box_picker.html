@@ -1,0 +1,88 @@
+{% load i18n %}
+<div class="shop-box-picker" data-testid="collection-box-picker">
+    {% if picker_boxes %}
+        <input class="shop-box-picker-search" type="search" data-testid="collection-box-search" placeholder="{% trans 'Search boxes...' %}" autocomplete="off">
+        <p class="shop-box-picker-count"><span data-testid="collection-box-count">{{ picker_selected }}</span> {% trans "In this collection" %}</p>
+        <div class="shop-box-picker-list">
+            {% for box in picker_boxes %}
+                <label class="shop-box-pick{% if box.selected %} is-in{% endif %}" data-box-row data-search="{{ box.search }}" data-testid="collection-box-{{ box.id }}">
+                    <input class="shop-box-pick-input" type="checkbox" name="{{ widget.name }}" value="{{ box.id }}"{% if box.selected %} checked{% endif %}>
+                    <span class="shop-box-pick-mark" aria-hidden="true"></span>
+                    <span class="shop-box-pick-copy">
+                        <strong>{{ box.name_ar }}</strong>
+                        <small>{{ box.sku }}{% if box.name_en %} · {{ box.name_en }}{% endif %}</small>
+                    </span>
+                    {% if box.is_active %}
+                        <span class="shop-badge shop-badge--green">{% trans "For sale" %}</span>
+                    {% else %}
+                        <span class="shop-badge">{% trans "Hidden" %}</span>
+                    {% endif %}
+                </label>
+            {% endfor %}
+            <p class="shop-box-picker-empty" data-testid="collection-box-empty" hidden>{% trans "No boxes match this search." %}</p>
+        </div>
+    {% else %}
+        <p class="shop-box-picker-empty">{% trans "No boxes yet." %}</p>
+    {% endif %}
+</div>
+{% if picker_boxes %}
+<script>
+(function () {
+    var root = document.querySelector("[data-testid='collection-box-picker']");
+    if (!root) return;
+    var input = root.querySelector("[data-testid='collection-box-search']");
+    var count = root.querySelector("[data-testid='collection-box-count']");
+    var empty = root.querySelector("[data-testid='collection-box-empty']");
+    var list = root.querySelector(".shop-box-picker-list");
+
+    function recount() {
+        count.textContent = root.querySelectorAll(".shop-box-pick-input:checked").length;
+    }
+
+    function filter() {
+        var query = input.value.trim().toLowerCase();
+        var shown = 0;
+        root.querySelectorAll("[data-box-row]").forEach(function (row) {
+            var match = !query || (row.getAttribute("data-search") || "").indexOf(query) !== -1;
+            row.hidden = !match;
+            if (match) shown += 1;
+        });
+        empty.hidden = shown !== 0;
+    }
+
+    function place(row) {
+        var box = row.querySelector(".shop-box-pick-input");
+        row.classList.toggle("is-in", box.checked);
+        var rows = list.querySelectorAll("[data-box-row]");
+        if (box.checked) {
+            var first = rows[0];
+            if (first && first !== row) list.insertBefore(row, first);
+            return;
+        }
+        var lastIn = null;
+        rows.forEach(function (item) {
+            if (item !== row && item.classList.contains("is-in")) lastIn = item;
+        });
+        if (lastIn) list.insertBefore(row, lastIn.nextSibling);
+    }
+
+    function onInput() { filter(); }
+    function onChange(event) {
+        var row = event.target.closest("[data-box-row]");
+        if (!row || !root.contains(row)) return;
+        place(row);
+        recount();
+        filter();
+    }
+    function cleanup() {
+        input.removeEventListener("input", onInput);
+        root.removeEventListener("change", onChange);
+        window.removeEventListener("pagehide", cleanup);
+    }
+
+    input.addEventListener("input", onInput);
+    root.addEventListener("change", onChange);
+    window.addEventListener("pagehide", cleanup);
+})();
+</script>
+{% endif %}

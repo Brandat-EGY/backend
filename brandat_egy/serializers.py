@@ -27,6 +27,7 @@ from .models import (
     OrderItem,
     OrderBox,
     OrderBoxItem,
+    ShippingRate,
 )
 
 class FavoriteProductSerializer(serializers.ModelSerializer):
@@ -161,40 +162,20 @@ class ProductImageSerializer(serializers.ModelSerializer):
             "is_main",
         )
 
-class AdminProductImageCreateSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(
-        required=True,
-        allow_empty_file=False,
-    )
 
-    class Meta:
-        model = ProductImage
-
-        fields = (
-            "id",
-            "image",
-            "is_main",
-            "created_at",
-        )
-
-        read_only_fields = (
-            "id",
-            "created_at",
-        )
+class ImageUploadValidationMixin:
+    MAX_IMAGE_SIZE = 5 * 1024 * 1024
+    ALLOWED_IMAGE_FORMATS = {
+        "JPEG",
+        "PNG",
+        "WEBP",
+    }
 
     def validate_image(self, image):
-        max_size = 5 * 1024 * 1024
-
-        if image.size > max_size:
+        if image.size > self.MAX_IMAGE_SIZE:
             raise serializers.ValidationError(
                 "Image size must not exceed 5 MB."
             )
-
-        allowed_formats = {
-            "JPEG",
-            "PNG",
-            "WEBP",
-        }
 
         image_format = getattr(
             getattr(image, "image", None),
@@ -202,7 +183,7 @@ class AdminProductImageCreateSerializer(serializers.ModelSerializer):
             None,
         )
 
-        if image_format not in allowed_formats:
+        if image_format not in self.ALLOWED_IMAGE_FORMATS:
             raise serializers.ValidationError(
                 "Only JPEG, PNG and WebP "
                 "images are allowed."
@@ -229,6 +210,27 @@ class AdminProductImageCreateSerializer(serializers.ModelSerializer):
 
         return attrs
 
+
+class AdminProductImageCreateSerializer(ImageUploadValidationMixin,serializers.ModelSerializer,):
+    image = serializers.ImageField(
+        required=True,
+        allow_empty_file=False,
+    )
+
+    class Meta:
+        model = ProductImage
+
+        fields = (
+            "id",
+            "image",
+            "is_main",
+            "created_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "created_at",
+        )
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     final_price = serializers.SerializerMethodField()
@@ -574,15 +576,46 @@ class BoxDetailSerializer(BoxListSerializer):
         read_only=True,
     )
 
+    average_rating = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
+
     class Meta(BoxListSerializer.Meta):
         fields = BoxListSerializer.Meta.fields + (
             "description_ar",
             "description_en",
             "images",
             "items",
+            "average_rating",
+            "reviews_count",
         )
 
         read_only_fields = fields
+
+    def _get_review_stats(self, obj):
+        if not hasattr(obj, "_catalog_review_stats"):
+            obj._catalog_review_stats = (
+                Review.objects.filter(
+                    order_box__box_id=obj.pk
+                ).aggregate(
+                    average=Avg("rating"),
+                    count=Count("pk"),
+                )
+            )
+
+        return obj._catalog_review_stats
+
+    def get_average_rating(self, obj):
+        stats = self._get_review_stats(obj)
+
+        return round(
+            float(stats["average"] or 0),
+            2,
+        )
+
+    def get_reviews_count(self, obj):
+        stats = self._get_review_stats(obj)
+
+        return stats["count"]
 
 
 
@@ -901,12 +934,18 @@ class CheckoutSerializer(serializers.Serializer):
         max_length=1000,
     )
 
+    governorate_id = serializers.PrimaryKeyRelatedField(
+        queryset=ShippingRate.objects.filter(is_active=True),
+        source="governorate",
+    )
+
     def validate(self, attrs):
         allowed_fields = {
             "customer_name",
             "phone",
             "email",
             "address",
+            "governorate_id",
         }
 
         unexpected = (
@@ -1055,12 +1094,27 @@ class CustomerOrderDetailSerializer(CustomerOrderListSerializer):
         read_only=True,
     )
 
+    governorate_name = serializers.SerializerMethodField()
+
+    shipping_fee = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    def get_governorate_name(self, obj):
+        if obj.governorate_id is None:
+            return ""
+        return obj.governorate.name_ar
+
     class Meta(CustomerOrderListSerializer.Meta):
         fields = CustomerOrderListSerializer.Meta.fields + (
             "customer_name",
             "phone",
             "email",
             "address",
+            "governorate_name",
+            "shipping_fee",
             "updated_at",
             "items",
             "boxes",
@@ -1108,6 +1162,50 @@ class ReviewCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         allowed_fields = {
             "order_item_id",
+            "name",
+            "rating",
+            "comment",
+        }
+
+        unexpected = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(unexpected)
+            })
+
+        return attrs
+
+
+class BoxReviewCreateSerializer(serializers.Serializer):
+    order_box_id = serializers.IntegerField(
+        min_value=1,
+    )
+
+    name = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+    rating = serializers.IntegerField(
+        min_value=1,
+        max_value=5,
+    )
+
+    comment = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "order_box_id",
             "name",
             "rating",
             "comment",
@@ -1644,6 +1742,8 @@ class AdminOrderQuerySerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=(
             "all",
+            "confirmed",
+            "preparing",
             "pending",
             "paid",
             "shipped",
@@ -1687,7 +1787,7 @@ class AdminOrderDetailSerializer(CustomerOrderDetailSerializer):
 
 class AdminOrderStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
-        choices=("shipped", "delivered"),
+        choices=("preparing", "shipped", "delivered"),
     )
 
     def validate(self, attrs):
@@ -1699,6 +1799,477 @@ class AdminOrderStatusSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 field: "This field is not allowed."
                 for field in sorted(unexpected)
+            })
+
+        return attrs
+
+
+
+class AdminCategorySerializer(serializers.ModelSerializer):
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = Category
+        fields = (
+            "id",
+            "name_ar",
+            "name_en",
+            "slug",
+            "parent",
+            "is_active",
+        )
+        read_only_fields = ("id",)
+
+    def validate_slug(self, value):
+        slug = value.strip().lower()
+
+        queryset = Category.objects.filter(
+            slug__iexact=slug
+        )
+
+        if self.instance is not None:
+            queryset = queryset.exclude(
+                pk=self.instance.pk
+            )
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "A category with this slug already exists."
+            )
+
+        return slug
+
+    def validate_parent(self, value):
+        if value is None:
+            return value
+
+        current = value
+        visited = set()
+
+        while current is not None:
+            if current.pk in visited:
+                raise serializers.ValidationError(
+                    "Invalid category hierarchy."
+                )
+
+            visited.add(current.pk)
+
+            if (
+                self.instance is not None
+                and current.pk == self.instance.pk
+            ):
+                raise serializers.ValidationError(
+                    "A category cannot be its own "
+                    "parent or descendant."
+                )
+
+            current = current.parent
+
+        return value
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "name_ar",
+            "name_en",
+            "slug",
+            "parent",
+            "is_active",
+        }
+
+        unexpected = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(unexpected)
+            })
+
+        return attrs
+
+
+class AdminCategoryQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=120,
+    )
+
+    is_active = serializers.BooleanField(
+        required=False,
+    )
+
+    parent = serializers.CharField(
+        required=False,
+    )
+
+    def validate_parent(self, value):
+        value = value.strip().lower()
+
+        if value == "root":
+            return None
+
+        if not value.isdecimal() or int(value) <= 0:
+            raise serializers.ValidationError(
+                "Use a positive category ID or 'root'."
+            )
+
+        return int(value)
+
+
+class AdminBoxWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Box
+        fields = (
+            "id",
+            "name_ar",
+            "name_en",
+            "description_ar",
+            "description_en",
+            "sku",
+            "price",
+            "discount_price",
+            "stock",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+
+    def validate_sku(self, value):
+        sku = value.strip().upper()
+
+        queryset = Box.objects.filter(
+            sku__iexact=sku
+        )
+
+        if self.instance is not None:
+            queryset = queryset.exclude(
+                pk=self.instance.pk
+            )
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "A box with this SKU already exists."
+            )
+
+        return sku
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "name_ar",
+            "name_en",
+            "description_ar",
+            "description_en",
+            "sku",
+            "price",
+            "discount_price",
+            "stock",
+        }
+
+        unexpected = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if unexpected:
+            raise serializers.ValidationError({
+                field: "This field cannot be modified here."
+                for field in sorted(unexpected)
+            })
+
+        price = attrs.get(
+            "price",
+            self.instance.price if self.instance else None,
+        )
+
+        discount_price = attrs.get(
+            "discount_price",
+            (
+                self.instance.discount_price
+                if self.instance else None
+            ),
+        )
+
+        if (
+            price is not None
+            and discount_price is not None
+            and discount_price >= price
+        ):
+            raise serializers.ValidationError({
+                "discount_price": (
+                    "Discount price must be lower "
+                    "than the regular price."
+                )
+            })
+
+        return attrs
+
+
+class AdminBoxListSerializer(serializers.ModelSerializer):
+    items_count = serializers.IntegerField(
+        read_only=True,
+    )
+
+    class Meta:
+        model = Box
+        fields = (
+            "id",
+            "name_ar",
+            "name_en",
+            "sku",
+            "price",
+            "discount_price",
+            "stock",
+            "is_active",
+            "items_count",
+            "created_at",
+        )
+
+        read_only_fields = fields
+
+
+class AdminBoxDetailSerializer(AdminBoxListSerializer):
+    items = BoxItemSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    images = BoxImageSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    available_stock = serializers.IntegerField(
+        read_only=True,
+    )
+
+    class Meta(AdminBoxListSerializer.Meta):
+        fields = AdminBoxListSerializer.Meta.fields + (
+            "description_ar",
+            "description_en",
+            "available_stock",
+            "images",
+            "items",
+            "updated_at",
+        )
+
+        read_only_fields = fields
+
+
+class AdminBoxQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=120,
+    )
+
+    is_active = serializers.BooleanField(
+        required=False,
+    )
+
+
+class AdminBoxItemCreateSerializer(serializers.Serializer):
+    variant_id = serializers.PrimaryKeyRelatedField(
+        source="variant",
+        queryset=ProductVariant.objects.all(),
+    )
+
+    quantity = serializers.IntegerField(
+        min_value=1,
+    )
+
+    def validate(self, attrs):
+        allowed = {"variant_id", "quantity"}
+        extra = set(self.initial_data) - allowed
+
+        if extra:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(extra)
+            })
+
+        return attrs
+
+
+class AdminBoxItemUpdateSerializer(serializers.Serializer):
+    quantity = serializers.IntegerField(
+        min_value=1,
+    )
+
+    def validate(self, attrs):
+        extra = set(self.initial_data) - {"quantity"}
+
+        if extra:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(extra)
+            })
+
+        return attrs
+
+
+class AdminBoxImageCreateSerializer(ImageUploadValidationMixin,serializers.ModelSerializer,):
+    image = serializers.ImageField(
+        required=True,
+        allow_empty_file=False,
+    )
+
+    class Meta:
+        model = BoxImage
+        fields = (
+            "id",
+            "image",
+            "is_main",
+            "created_at",
+        )
+        read_only_fields = (
+            "id",
+            "created_at",
+        )
+
+
+
+class AdminCollectionWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Collection
+        fields = (
+            "id",
+            "name_ar",
+            "name_en",
+            "description_ar",
+            "description_en",
+            "slug",
+            "is_active",
+        )
+        read_only_fields = ("id", "is_active")
+
+    def validate_slug(self, value):
+        slug = value.strip().lower()
+
+        queryset = Collection.objects.filter(
+            slug__iexact=slug
+        )
+
+        if self.instance is not None:
+            queryset = queryset.exclude(
+                pk=self.instance.pk
+            )
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "A collection with this slug already exists."
+            )
+
+        return slug
+
+    def validate(self, attrs):
+        allowed_fields = {
+            "name_ar",
+            "name_en",
+            "description_ar",
+            "description_en",
+            "slug",
+        }
+
+        extra_fields = (
+            set(self.initial_data) - allowed_fields
+        )
+
+        if extra_fields:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(extra_fields)
+            })
+
+        return attrs
+
+
+class AdminCollectionQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=120,
+    )
+
+    is_active = serializers.BooleanField(
+        required=False,
+    )
+
+
+class AdminCollectionListSerializer(serializers.ModelSerializer):
+    boxes_count = serializers.IntegerField(
+        read_only=True,
+    )
+
+    class Meta:
+        model = Collection
+        fields = (
+            "id",
+            "name_ar",
+            "name_en",
+            "description_ar",
+            "description_en",
+            "slug",
+            "is_active",
+            "boxes_count",
+        )
+        read_only_fields = fields
+
+
+class AdminCollectionBoxSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Box
+        fields = (
+            "id",
+            "name_ar",
+            "name_en",
+            "sku",
+            "price",
+            "stock",
+            "is_active",
+        )
+        read_only_fields = fields
+
+
+class AdminCollectionDetailSerializer(AdminCollectionListSerializer):
+    boxes = AdminCollectionBoxSerializer(
+        many=True,
+        read_only=True,
+    )
+
+    class Meta(AdminCollectionListSerializer.Meta):
+        fields = AdminCollectionListSerializer.Meta.fields + (
+            "boxes",
+        )
+        read_only_fields = fields
+
+
+class AdminCollectionBoxAddSerializer(serializers.Serializer):
+    box_id = serializers.PrimaryKeyRelatedField(
+        source="box",
+        queryset=Box.objects.all(),
+    )
+
+    def validate(self, attrs):
+        extra_fields = (
+            set(self.initial_data) - {"box_id"}
+        )
+
+        if extra_fields:
+            raise serializers.ValidationError({
+                field: "This field is not allowed."
+                for field in sorted(extra_fields)
             })
 
         return attrs

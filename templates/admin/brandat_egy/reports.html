@@ -1,0 +1,200 @@
+{% extends "admin/base.html" %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="reports-page">
+    <div class="studio-head">
+        <div>
+            <h1>التقارير</h1>
+            <p>المبيعات والمخزون والطلبات في {{ range_label }}</p>
+        </div>
+    </div>
+
+    <form class="studio-card reports-filter" method="get" data-testid="reports-filter">
+        <div class="studio-actions">
+            <a class="studio-btn {% if range_key == 'today' %}studio-btn-primary{% endif %}" href="?period=today" data-testid="reports-today">اليوم</a>
+            <a class="studio-btn {% if range_key == 'yesterday' %}studio-btn-primary{% endif %}" href="?period=yesterday" data-testid="reports-yesterday">أمس</a>
+        </div>
+        <label>من <input type="date" name="start" value="{{ range_start|date:'Y-m-d' }}" data-testid="reports-start"></label>
+        <label>إلى <input type="date" name="end" value="{{ range_end|date:'Y-m-d' }}" data-testid="reports-end"></label>
+        <input type="hidden" name="period" value="custom">
+        <button class="studio-btn-primary" type="submit" data-testid="reports-apply">عرض الفترة</button>
+    </form>
+
+    <div class="studio-kpis">
+        <article class="studio-card studio-kpi">
+            <strong data-testid="reports-revenue">{{ revenue|floatformat:0 }} ج.م</strong>
+            <span class="studio-muted">مبيعات مسلّمة</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ delivered_count }}</strong>
+            <span class="studio-muted">طلبات مسلّمة</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ orders_count }}</strong>
+            <span class="studio-muted">كل الطلبات</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ average_order|floatformat:0 }} ج.م</strong>
+            <span class="studio-muted">متوسط الطلب المسلّم</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ shipping|floatformat:0 }} ج.م</strong>
+            <span class="studio-muted">مصاريف الشحن المحصّلة</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ new_customers }}</strong>
+            <span class="studio-muted">عملاء جدد</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ reviews_count }}</strong>
+            <span class="studio-muted">تقييمات</span>
+        </article>
+        <article class="studio-card studio-kpi">
+            <strong>{{ inventory.value|floatformat:0 }} ج.م</strong>
+            <span class="studio-muted">قيمة المخزون الآن</span>
+        </article>
+    </div>
+
+    <div class="studio-grid-2">
+        <section class="studio-card">
+            <h2>حالات الطلبات</h2>
+            <table class="studio-table">
+                <thead>
+                    <tr><th>الحالة</th><th>العدد</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in status_rows %}
+                    <tr>
+                        <td>{{ row.label }}</td>
+                        <td>{{ row.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        <section class="studio-card">
+            <h2>المخزون الآن</h2>
+            <p class="studio-muted">المخزون لقطة حالية، مش تاريخ الفترة.</p>
+            <table class="studio-table">
+                <tbody>
+                    <tr><td>كل الأكواد</td><td>{{ inventory.total }}</td></tr>
+                    <tr><td>على وشك النفاد</td><td>{{ inventory.low }}</td></tr>
+                    <tr><td>نفد</td><td>{{ inventory.out }}</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <section class="studio-card">
+        <h2>المبيعات يومًا بيوم</h2>
+        {% if range_clipped %}<p class="studio-muted">الجدول يعرض أول ٦٢ يومًا من الفترة. الإجماليات فوق تشمل الفترة كلها.</p>{% endif %}
+        <div class="studio-table-wrap">
+            <table class="studio-table" data-testid="reports-days">
+                <thead>
+                    <tr>
+                        <th>اليوم</th>
+                        <th>الطلبات</th>
+                        <th>المسلّم</th>
+                        <th>المبيعات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in days %}
+                    <tr>
+                        <td>{{ day.label }}</td>
+                        <td>{{ day.orders }}</td>
+                        <td>{{ day.delivered }}</td>
+                        <td>{{ day.revenue|floatformat:0 }} ج.م</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="studio-muted">لا توجد أيام في هذه الفترة.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="studio-grid-2">
+        <section class="studio-card">
+            <h2>الأكثر مبيعًا</h2>
+            <table class="studio-table">
+                <thead>
+                    <tr><th>المنتج</th><th>الكمية</th><th>المبيعات</th></tr>
+                </thead>
+                <tbody>
+                    {% for product in top_products %}
+                    <tr>
+                        <td><a href="{{ product.url }}">{{ product.name }}</a></td>
+                        <td>{{ product.sold }}</td>
+                        <td>{{ product.revenue }} ج.م</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="studio-muted">لا توجد مبيعات مسلّمة في هذه الفترة.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        <section class="studio-card">
+            <h2>البوكسات المسلّمة</h2>
+            <table class="studio-table">
+                <thead>
+                    <tr><th>البوكس</th><th>الكمية</th><th>المبيعات</th></tr>
+                </thead>
+                <tbody>
+                    {% for box in top_boxes %}
+                    <tr>
+                        <td>{{ box.name_ar }}</td>
+                        <td>{{ box.sold }}</td>
+                        <td>{{ box.revenue|floatformat:0 }} ج.م</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="studio-muted">لا توجد بوكسات مسلّمة في هذه الفترة.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <div class="studio-grid-2">
+        <section class="studio-card">
+            <h2>على وشك النفاد</h2>
+            <table class="studio-table">
+                <thead>
+                    <tr><th>المنتج</th><th>الحجم</th><th>الكمية</th></tr>
+                </thead>
+                <tbody>
+                    {% for variant in inventory.low_rows %}
+                    <tr>
+                        <td>{{ variant.product.name_ar }}</td>
+                        <td>{{ variant.size|default:"—" }}</td>
+                        <td>{{ variant.stock }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="studio-muted">لا يوجد مخزون منخفض.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        <section class="studio-card">
+            <h2>نفد من المخزون</h2>
+            <table class="studio-table">
+                <thead>
+                    <tr><th>المنتج</th><th>الحجم</th></tr>
+                </thead>
+                <tbody>
+                    {% for variant in inventory.out_rows %}
+                    <tr>
+                        <td>{{ variant.product.name_ar }}</td>
+                        <td>{{ variant.size|default:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="studio-muted">لا يوجد منتج نفذ.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</section>
+{% endblock %}

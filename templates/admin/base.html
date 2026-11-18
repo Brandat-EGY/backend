@@ -1,0 +1,169 @@
+{% extends "unfold/layouts/skeleton.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap">
+{% endblock %}
+
+{% block base %}
+<div class="shop-app" dir="rtl">
+    {% if not is_popup %}
+    <aside class="shop-sidebar">
+        <a class="shop-brand" href="{% url 'admin:index' %}">
+            <span class="shop-brand-b">B</span>
+            <span class="shop-brand-text">
+                <strong>BRANDAT</strong>
+                <small>BEAUTY</small>
+            </span>
+        </a>
+
+        <nav class="shop-nav">
+            {% url 'admin:index' as dash_url %}
+            <a class="{% if request.path == dash_url %}is-active{% endif %}" href="{{ dash_url }}" data-testid="nav-dashboard">
+                <span class="material-symbols-outlined">home</span> {% trans "Dashboard" %}
+            </a>
+            {% if request.user.is_superuser or perms.brandat_egy.view_order %}
+            <a class="{% if '/brandat_egy/order/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_order_changelist' %}" data-testid="nav-orders">
+                <span class="material-symbols-outlined">shopping_bag</span> {% trans "Orders" %}
+            </a>
+            {% endif %}
+            {% if request.user.is_superuser or perms.brandat_egy.view_product %}
+            <a class="{% if '/brandat_egy/product/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_product_changelist' %}" data-testid="nav-products">
+                <span class="material-symbols-outlined">shopping_basket</span> {% trans "Products" %}
+            </a>
+            <a class="{% if request.resolver_match.url_name == 'brandat_inventory' %}is-active{% endif %}" href="{% url 'admin:brandat_inventory' %}" data-testid="nav-inventory">
+                <span class="material-symbols-outlined">inventory_2</span> {% trans "Inventory" %}
+            </a>
+            {% endif %}
+            {% if request.user.is_superuser or perms.brandat_egy.view_category %}
+            <a class="{% if '/brandat_egy/category/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_category_changelist' %}" data-testid="nav-categories">
+                <span class="material-symbols-outlined">grid_view</span> {% trans "Categories" %}
+            </a>
+            {% endif %}
+            {% if request.user.is_superuser or perms.brandat_egy.view_box %}
+            <a class="{% if '/brandat_egy/box/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_box_changelist' %}" data-testid="nav-boxes">
+                <span class="material-symbols-outlined">redeem</span> {% trans "Boxes" %}
+            </a>
+            {% endif %}
+            {% if request.user.is_superuser %}
+            <a class="{% if request.resolver_match.url_name == 'brandat_shipping' %}is-active{% endif %}" href="{% url 'admin:brandat_shipping' %}" data-testid="nav-shipping">
+                <span class="material-symbols-outlined">local_shipping</span> {% trans "Shipping" %}
+            </a>
+            <a class="{% if '/brandat_egy/collection/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_collection_changelist' %}" data-testid="nav-collections">
+                <span class="material-symbols-outlined">collections_bookmark</span> {% trans "Collections" %}
+            </a>
+            <a class="{% if '/accounts/user/' in request.path and '/employees/' not in request.path %}is-active{% endif %}" href="{% url 'admin:accounts_user_changelist' %}" data-testid="nav-customers">
+                <span class="material-symbols-outlined">group</span> {% trans "Customers" %}
+            </a>
+            <a class="{% if '/accounts/user/employees/' in request.path %}is-active{% endif %}" href="{% url 'admin:accounts_staff' %}" data-testid="nav-staff">
+                <span class="material-symbols-outlined">badge</span> الموظفون
+            </a>
+            <a class="{% if '/brandat_egy/dailyoffer/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_dailyoffer_changelist' %}" data-testid="nav-offers">
+                <span class="material-symbols-outlined">sell</span> {% trans "Daily Offers" %}
+            </a>
+            <a class="{% if '/brandat_egy/review/' in request.path %}is-active{% endif %}" href="{% url 'admin:brandat_egy_review_changelist' %}" data-testid="nav-reviews">
+                <span class="material-symbols-outlined">star</span> {% trans "Reviews" %}
+            </a>
+            <a class="{% if request.resolver_match.url_name == 'brandat_reports' %}is-active{% endif %}" href="{% url 'admin:brandat_reports' %}" data-testid="nav-reports">
+                <span class="material-symbols-outlined">bar_chart</span> {% trans "Reports" %}
+            </a>
+            <a class="{% if request.resolver_match.url_name == 'brandat_activity' %}is-active{% endif %}" href="{% url 'admin:brandat_activity' %}" data-testid="nav-activity">
+                <span class="material-symbols-outlined">history</span> {% trans "Activity log" %}
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="shop-userbox">
+            <a class="shop-user" href="{% if request.user.is_superuser %}{% url 'admin:accounts_staff' %}{% else %}{% url 'admin:index' %}{% endif %}">
+                <span class="shop-avatar">{{ request.user.customer_name|default:request.user.phone|slice:":1" }}</span>
+                <span>
+                    <strong>{% firstof request.user.customer_name request.user.phone %}</strong>
+                    <small>{% if request.user.is_superuser %}{% trans "Super Admin" %}{% else %}موظف المتجر{% endif %}</small>
+                </span>
+            </a>
+            <form method="post" action="{% url 'admin:logout' %}">
+                {% csrf_token %}
+                <button class="shop-logout" type="submit" data-testid="nav-logout">
+                    <span class="material-symbols-outlined">logout</span>
+                    تسجيل الخروج
+                </button>
+            </form>
+        </div>
+    </aside>
+    {% endif %}
+
+    <div class="shop-main">
+        {% if not is_popup %}
+        <header class="shop-top">
+            <button class="shop-menu" type="button" data-testid="nav-menu" aria-label="القائمة">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+            <form class="shop-search" method="get" action="{% url 'admin:brandat_egy_order_changelist' %}">
+                <span class="material-symbols-outlined">search</span>
+                <input type="search" name="q" placeholder="ابحث عن منتج أو طلب أو عميل..." data-testid="admin-search" aria-label="ابحث عن منتج أو طلب أو عميل...">
+            </form>
+            <div class="shop-top-actions">
+                <a class="shop-icon-btn" href="{% url 'admin:brandat_egy_order_changelist' %}?status__exact=confirmed" data-testid="nav-notifications" aria-label="{% trans 'Orders waiting' %}">
+                    <span class="material-symbols-outlined">notifications</span>
+                    <i></i>
+                </a>
+                {% if request.user.is_superuser %}
+                <a class="shop-icon-btn" href="{% url 'admin:brandat_egy_review_changelist' %}" aria-label="{% trans 'Reviews' %}">
+                    <span class="material-symbols-outlined">chat_bubble</span>
+                </a>
+                {% endif %}
+                <span class="shop-icon-btn" aria-hidden="true">
+                    <span class="material-symbols-outlined">dark_mode</span>
+                </span>
+                <a class="shop-avatar shop-avatar--photo" href="{% if request.user.is_superuser %}{% url 'admin:accounts_staff' %}{% else %}{% url 'admin:index' %}{% endif %}">
+                    {{ request.user.customer_name|default:request.user.phone|slice:":1" }}
+                </a>
+            </div>
+        </header>
+        {% endif %}
+
+        <div class="shop-stage">
+            {% if messages %}
+            <div class="shop-messages">
+                {% for message in messages %}
+                <p class="shop-message">{{ message }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="shop-fallback-head">
+                {% block page_heading %}
+                    {% if opts %}<h1>{{ title }}</h1>{% endif %}
+                {% endblock %}
+                <div class="shop-fallback-actions">{% block nav-global-side %}{% endblock %}</div>
+            </div>
+
+            {% block content %}{% endblock %}
+            {% block footer %}{% endblock %}
+        </div>
+    </div>
+    <button class="shop-backdrop" type="button" data-testid="nav-backdrop" aria-label="إغلاق القائمة"></button>
+</div>
+<script>
+(function () {
+    var app = document.querySelector(".shop-app");
+    var openButton = document.querySelector("[data-testid='nav-menu']");
+    var backdrop = document.querySelector("[data-testid='nav-backdrop']");
+    if (!app || !openButton || !backdrop) return;
+    function closeNav() { app.classList.remove("is-nav-open"); }
+    function toggleNav() { app.classList.toggle("is-nav-open"); }
+    function onNavClick(event) {
+        if (event.target.closest("a")) closeNav();
+    }
+    openButton.addEventListener("click", toggleNav);
+    backdrop.addEventListener("click", closeNav);
+    app.addEventListener("click", onNavClick);
+    window.addEventListener("pagehide", function () {
+        openButton.removeEventListener("click", toggleNav);
+        backdrop.removeEventListener("click", closeNav);
+        app.removeEventListener("click", onNavClick);
+    }, { once: true });
+})();
+</script>
+{% endblock %}

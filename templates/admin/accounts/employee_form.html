@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+<section class="studio-page" data-testid="staff-form">
+    <div class="studio-head">
+        <div>
+            <h1>{{ title }}</h1>
+            <p>الحساب يفتح الطلبات والمنتجات والبوكسات فقط.</p>
+        </div>
+        <a class="studio-btn" href="{% url 'admin:accounts_staff' %}" data-testid="staff-back">رجوع</a>
+    </div>
+    <form class="studio-card staff-form" method="post">
+        {% csrf_token %}
+        <label>
+            {{ form.customer_name.label }}
+            {{ form.customer_name }}
+            {{ form.customer_name.errors }}
+        </label>
+        <label>
+            {{ form.phone.label }}
+            {{ form.phone }}
+            {{ form.phone.errors }}
+        </label>
+        <label>
+            {{ form.password1.label }}
+            {{ form.password1 }}
+            {{ form.password1.errors }}
+        </label>
+        <label>
+            {{ form.password2.label }}
+            {{ form.password2 }}
+            {{ form.password2.errors }}
+        </label>
+        {% if "is_active" in form.fields %}
+        <label class="staff-check">
+            {{ form.is_active }}
+            <span>{{ form.is_active.label }}</span>
+        </label>
+        {{ form.is_active.errors }}
+        {% elif employee.is_superuser %}
+        <p class="studio-muted">هذا الحساب مدير عام وصلاحياته كاملة.</p>
+        {% endif %}
+        <button class="studio-btn-primary" type="submit" data-testid="staff-save">احفظ</button>
+    </form>
+</section>
+{% endblock %}

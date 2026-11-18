@@ -1,0 +1,132 @@
+{% extends "admin/base.html" %}
+{% load i18n admin_ui %}
+
+{% block page_heading %}{% endblock %}
+
+{% block content %}
+{% trans "Start preparing this order?" as prepare_confirm %}
+{% trans "Send this order out for delivery?" as ship_confirm %}
+{% trans "Did the customer receive it and pay?" as deliver_confirm %}
+{% trans "Cancel this order and put the pieces back?" as cancel_confirm %}
+<section class="shop-panel" data-testid="orders-page">
+    <div class="shop-card-head">
+        <div>
+            <h1>{% trans "Orders" %}</h1>
+            <p class="shop-muted">{% trans "Manage and track all customer orders." %}</p>
+        </div>
+    </div>
+
+    <nav class="shop-tabs" data-testid="order-status-tabs">
+        <a class="shop-tab {% if not request.GET.status__exact %}is-active{% endif %}" href="?{% if cl.query %}q={{ cl.query }}{% endif %}">{% trans "All orders" %} <span>{{ order_tab_counts.all }}</span></a>
+        <a class="shop-tab {% if request.GET.status__exact == 'confirmed' %}is-active{% endif %}" href="?status__exact=confirmed{% if cl.query %}&q={{ cl.query }}{% endif %}">{% trans "Confirmed" %} <span>{{ order_tab_counts.confirmed }}</span></a>
+        <a class="shop-tab {% if request.GET.status__exact == 'preparing' %}is-active{% endif %}" href="?status__exact=preparing{% if cl.query %}&q={{ cl.query }}{% endif %}">{% trans "Preparing" %} <span>{{ order_tab_counts.preparing }}</span></a>
+        <a class="shop-tab {% if request.GET.status__exact == 'shipped' %}is-active{% endif %}" href="?status__exact=shipped{% if cl.query %}&q={{ cl.query }}{% endif %}">{% trans "Shipped" %} <span>{{ order_tab_counts.shipped }}</span></a>
+        <a class="shop-tab {% if request.GET.status__exact == 'delivered' %}is-active{% endif %}" href="?status__exact=delivered{% if cl.query %}&q={{ cl.query }}{% endif %}">{% trans "Delivered" %} <span>{{ order_tab_counts.delivered }}</span></a>
+        <a class="shop-tab {% if request.GET.status__exact == 'cancelled' %}is-active{% endif %}" href="?status__exact=cancelled{% if cl.query %}&q={{ cl.query }}{% endif %}">{% trans "Cancelled" %} <span>{{ order_tab_counts.cancelled }}</span></a>
+    </nav>
+
+    <div class="shop-toolbar">
+        <form method="get">
+            {% if request.GET.status__exact %}<input type="hidden" name="status__exact" value="{{ request.GET.status__exact }}">{% endif %}
+            <span class="material-symbols-outlined">search</span>
+            <input type="search" name="q" value="{{ cl.query }}" placeholder="{% trans 'Search orders...' %}" data-testid="order-search">
+        </form>
+    </div>
+
+    <table class="shop-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{% trans "Customer" %}</th>
+                <th class="shop-date">{% trans "Date" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Total" %}</th>
+                <th>{% trans "Next step" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in cl.result_list %}
+            <tr>
+                <td class="shop-muted">{{ forloop.counter }}</td>
+                <td>
+                    <span class="shop-person">
+                        <span class="shop-thumb">{{ order.customer_name|slice:":1" }}</span>
+                        <span>{{ order.customer_name }}</span>
+                    </span>
+                </td>
+                <td class="shop-date">{{ order.created_at|date:"Y/m/d" }}</td>
+                <td>
+                    {% if order.status == "delivered" %}
+                    <span class="shop-badge shop-badge--green">{% trans "Delivered" %}</span>
+                    {% elif order.status == "confirmed" or order.status == "pending" %}
+                    <span class="shop-badge shop-badge--amber">{% trans "Confirmed" %}</span>
+                    {% elif order.status == "preparing" %}
+                    <span class="shop-badge shop-badge--rose">{% trans "Preparing" %}</span>
+                    {% elif order.status == "shipped" %}
+                    <span class="shop-badge shop-badge--blue">{% trans "Shipped" %}</span>
+                    {% elif order.status == "cancelled" %}
+                    <span class="shop-badge shop-badge--red">{% trans "Cancelled" %}</span>
+                    {% else %}
+                    <span class="shop-badge">{{ order.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ order.total_price|floatformat:0 }} {% trans "EGP" %}</td>
+                <td>
+                    <div class="shop-actions">
+                        <a class="shop-icon-link" data-testid="order-view-{{ order.pk }}" href="{% url 'admin:brandat_egy_order_change' order.pk %}" aria-label="{% trans 'View order' %}">
+                            <span class="material-symbols-outlined">visibility</span>
+                        </a>
+                        {% if order.status == "confirmed" or order.status == "pending" %}
+                        <form method="post" action="{% url 'admin:brandat_egy_order_step' order.pk 'prepare' %}">
+                            {% csrf_token %}
+                            <button class="shop-step" type="submit" data-testid="order-prepare-{{ order.pk }}" onclick="return confirm('{{ prepare_confirm|escapejs }}')">{% trans "Start preparing" %}</button>
+                        </form>
+                        <form method="post" action="{% url 'admin:brandat_egy_order_step' order.pk 'cancel' %}">
+                            {% csrf_token %}
+                            <button class="shop-step shop-step--ghost" type="submit" data-testid="order-cancel-{{ order.pk }}" onclick="return confirm('{{ cancel_confirm|escapejs }}')">{% trans "Cancel the order" %}</button>
+                        </form>
+                        {% elif order.status == "preparing" %}
+                        <form method="post" action="{% url 'admin:brandat_egy_order_step' order.pk 'ship' %}">
+                            {% csrf_token %}
+                            <button class="shop-step" type="submit" data-testid="order-ship-{{ order.pk }}" onclick="return confirm('{{ ship_confirm|escapejs }}')">{% trans "Send it out" %}</button>
+                        </form>
+                        <form method="post" action="{% url 'admin:brandat_egy_order_step' order.pk 'cancel' %}">
+                            {% csrf_token %}
+                            <button class="shop-step shop-step--ghost" type="submit" data-testid="order-cancel-{{ order.pk }}" onclick="return confirm('{{ cancel_confirm|escapejs }}')">{% trans "Cancel the order" %}</button>
+                        </form>
+                        {% elif order.status == "shipped" %}
+                        <form method="post" action="{% url 'admin:brandat_egy_order_step' order.pk 'deliver' %}">
+                            {% csrf_token %}
+                            <button class="shop-step" type="submit" data-testid="order-deliver-{{ order.pk }}" onclick="return confirm('{{ deliver_confirm|escapejs }}')">{% trans "Received and paid" %}</button>
+                        </form>
+                        <form method="post" action="{% url 'admin:brandat_egy_order_step' order.pk 'cancel' %}">
+                            {% csrf_token %}
+                            <button class="shop-step shop-step--ghost" type="submit" data-testid="order-cancel-{{ order.pk }}" onclick="return confirm('{{ cancel_confirm|escapejs }}')">{% trans "Cancel the order" %}</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="shop-muted">{% trans "No orders yet." %}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="shop-pager">
+        <span>{% blocktranslate with shown=cl.result_list|length total=cl.result_count %}Showing {{ shown }} of {{ total }}{% endblocktranslate %}</span>
+        <span>
+            {% if cl.page_num != 1 %}
+            {% with prev_page=cl.page_num|add:"-1" %}
+            <a href="{% page_query request prev_page %}">{% trans "Previous" %}</a>
+            {% endwith %}
+            {% endif %}
+            {% if cl.page_num != cl.paginator.num_pages %}
+            {% with next_page=cl.page_num|add:"1" %}
+            <a href="{% page_query request next_page %}">{% trans "Next" %}</a>
+            {% endwith %}
+            {% endif %}
+        </span>
+    </div>
+</section>
+{% endblock %}

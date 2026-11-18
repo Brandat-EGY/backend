@@ -200,6 +200,85 @@ class CartItemAddAPITests(APITestCase):
             f"box:{self.box.pk}",
         )
 
+    def test_shared_variant_stock_blocks_the_box(self):
+        self.client.post(
+            self.url,
+            {
+                "type": "variant",
+                "item_id": self.variant.pk,
+                "quantity": 4,
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "type": "box",
+                "item_id": self.box.pk,
+                "quantity": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 409)
+
+        cart = self.client.get(reverse("cart-detail"))
+
+        self.assertEqual(cart.data["count"], 1)
+        self.assertEqual(cart.data["items"][0]["quantity"], 4)
+
+    def test_shared_variant_stock_blocks_the_loose_item(self):
+        self.client.post(
+            self.url,
+            {
+                "type": "box",
+                "item_id": self.box.pk,
+                "quantity": 1,
+            },
+            format="json",
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "type": "variant",
+                "item_id": self.variant.pk,
+                "quantity": 4,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 409)
+
+        cart = self.client.get(reverse("cart-detail"))
+
+        self.assertEqual(cart.data["count"], 1)
+        self.assertEqual(cart.data["items"][0]["type"], "box")
+
+    def test_shared_variant_stock_allows_a_fitting_mix(self):
+        variant_response = self.client.post(
+            self.url,
+            {
+                "type": "variant",
+                "item_id": self.variant.pk,
+                "quantity": 1,
+            },
+            format="json",
+        )
+        box_response = self.client.post(
+            self.url,
+            {
+                "type": "box",
+                "item_id": self.box.pk,
+                "quantity": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(variant_response.status_code, 201)
+        self.assertEqual(box_response.status_code, 201)
+
     def test_quantity_exceeds_stock(self):
         response = self.client.post(
             self.url,

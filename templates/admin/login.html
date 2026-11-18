@@ -1,0 +1,51 @@
+{% extends "unfold/layouts/unauthenticated.html" %}
+
+{% load i18n static unfold %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    {{ form.media }}
+{% endblock %}
+
+{% block title %}
+    {% trans "Sign in" %} | Brandat Egy
+{% endblock %}
+
+{% block content %}
+    <div class="brandat-login">
+        <img class="brandat-login-mark" src="{% static 'brandat_egy/img/logo.jpg' %}" alt="Brandat Egy">
+        <h1>
+            <span>{% trans "Sign in to the store" %}</span>
+            Brandat Egy
+        </h1>
+        <p>{% trans "Use your phone number and password." %}</p>
+
+        {% include "unfold/helpers/messages.html" %}
+
+        {% if form.errors or form.non_field_errors %}
+            <div class="flex flex-col gap-4 mb-8 *:mb-0">
+                {% include "unfold/helpers/messages/errornote.html" with errors=form.errors %}
+                {% include "unfold/helpers/messages/error.html" with errors=form.non_field_errors %}
+                {% if user.is_authenticated %}
+                    <p class="brandat-login-note">
+                        {% blocktranslate trimmed with username=user.get_username %}
+                            You are signed in as {{ username }}, but this account cannot open the store.
+                        {% endblocktranslate %}
+                    </p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <form action="{{ app_path }}" method="post" id="login-form" data-testid="admin-login-form">
+            {% csrf_token %}
+            {% include "unfold/helpers/field.html" with field=form.username %}
+            {% include "unfold/helpers/field.html" with field=form.password %}
+
+            <div class="flex flex-col gap-3 mt-6">
+                {% component "unfold/components/button.html" with submit=1 variant="primary" class="submit-row w-full" %}
+                    {% trans "Sign in" %}
+                {% endcomponent %}
+            </div>
+        </form>
+    </div>
+{% endblock %}
